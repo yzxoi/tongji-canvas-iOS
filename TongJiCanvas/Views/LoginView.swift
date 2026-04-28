@@ -5,11 +5,11 @@ import Combine
 // MARK: - ViewModel
 
 @MainActor
-final class LoginViewModel: NSObject, ObservableObject, WKHTTPCookieStoreObserver {
-    @Published var currentURL   = ""
+final class LoginViewModel: NSObject, ObservableObject {
+    @Published var currentURL    = ""
     @Published var loginDetected = false
-    @Published var countdown    = 0
-    @Published var isMobileUA   = true
+    @Published var countdown     = 0
+    @Published var isMobileUA    = true
     @Published var statusMessage = "请在下方统一认证页面完成登录，系统会自动捕获 Cookies。"
 
     let loginURL = URL(string: "https://canvas.tongji.edu.cn/lms/mobile/forscan?courseCode=2333&rollCallToken=2333")!
@@ -19,17 +19,18 @@ final class LoginViewModel: NSObject, ObservableObject, WKHTTPCookieStoreObserve
     var repo: SessionRepository?
 
     private var countdownTask: Task<Void, Never>?
-    private var hasObserver = false
+    /// 跟踪是否已经离开过 Canvas 域（跳转到 IAM 登录页）。
+    /// 只有先经过 IAM 再回到 Canvas，才能判定登录成功，
+    /// 避免初始 URL 加载时误触发。
+    private var hasVisitedNonCanvas = false
 
-    var mobileUA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.0.0 Mobile/15E148 Safari/604.1"
-    var desktopUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
-
+    let mobileUA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.0.0 Mobile/15E148 Safari/604.1"
+    let desktopUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
     var currentUA: String { isMobileUA ? mobileUA : desktopUA }
 
     func configureWebView(_ wv: WKWebView) {
         webView = wv
         wv.customUserAgent = currentUA
-        addCookieObserver(to: wv)
         clearAndLoad()
     }
 
@@ -44,21 +45,44 @@ final class LoginViewModel: NSObject, ObservableObject, WKHTTPCookieStoreObserve
         clearAndLoad()
     }
 
+    /// 等 cookie 全部清完后再加载，避免竞态条件。
     private func clearAndLoad() {
         guard let wv = webView else { return }
-        HTTPCookieStorage.shared.removeCookies(since: .distantPast)
-        wv.configuration.websiteDataStore.httpCookieStore.getAllCookies { cookies in
-            cookies.forEach { wv.configuration.websiteDataStore.httpCookieStore.delete($0) }
+        hasVisitedNonCanvas = false
+        loginDetected = false
+        let store = wv.configuration.websiteDataStore.httpCookieStore
+        store.getAllCookies { [weak self, weak wv] cookies in
+            guard let self, let wv else { return }
+            let group = DispatchGroup()
+            for cookie in cookies {
+                group.enter()
+                store.delete(cookie) { group.leave() }
+            }
+            group.notify(queue: .main) {
+                wv.load(URLRequest(url: self.loginURL,
+                                   cachePolicy: .reloadIgnoringLocalAndRemoteCacheData))
+            }
         }
-        wv.load(URLRequest(url: loginURL, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData))
     }
 
+    /// 由导航代理每次 URL 变化时调用（与 Android 版逻辑对齐）。
     func handleURLChange(_ url: URL) {
         currentURL = url.absoluteString
         let s = url.absoluteString
-        let isCanvas = s.hasPrefix("https://canvas.tongji.edu.cn/")
-        let isAuthPage = s.contains("login") || s.contains("oauth2") || s.contains("openid_connect") || s.contains("saml")
-        if isCanvas && !isAuthPage && !loginDetected {
+
+        let isCanvas   = s.hasPrefix("https://canvas.tongji.edu.cn/")
+        let isAuthPage = s.contains("login") || s.contains("oauth2") ||
+                         s.contains("openid_connect") || s.contains("saml")
+
+        // 只要 URL 不是"Canvas 正常页"，就记录已访问过非 Canvas 页面
+        if !isCanvas || isAuthPage {
+            hasVisitedNonCanvas = true
+        }
+
+        // 登录成功的充要条件：
+        //   1. 落地在 Canvas 正常页（非认证流程 URL）
+        //   2. 之前已经离开过 Canvas（说明经历了 IAM 登录跳转）
+        if isCanvas && !isAuthPage && hasVisitedNonCanvas && !loginDetected {
             loginDetected = true
             startCountdown()
         }
@@ -81,36 +105,18 @@ final class LoginViewModel: NSObject, ObservableObject, WKHTTPCookieStoreObserve
 
     private func extractAndSave() async {
         guard let wv = webView, let repo = repo else { return }
-        let cookieString = await CookieHelper.captureCanvasCookies(from: wv.configuration.websiteDataStore.httpCookieStore)
+        let cookieString = await CookieHelper.captureCanvasCookies(
+            from: wv.configuration.websiteDataStore.httpCookieStore
+        )
         guard !cookieString.isEmpty else {
             statusMessage = "未找到认证信息，请重试。"
             loginDetected = false
+            hasVisitedNonCanvas = false
             return
         }
         let displayName = "用户\(Int(Date().timeIntervalSince1970))"
         repo.addOrUpdate(displayName: displayName, accessToken: cookieString)
         onSaved()
-    }
-
-    // WKHTTPCookieStoreObserver
-    nonisolated func cookiesDidChange(in cookieStore: WKHTTPCookieStore) {
-        Task { @MainActor in
-            guard !self.loginDetected else { return }
-            let cookies = await cookieStore.allCookies()
-            let hasSession = cookies.contains {
-                $0.name == "_canvas_middle_session" && $0.domain.contains("tongji.edu.cn")
-            }
-            if hasSession {
-                guard !self.loginDetected, let wv = self.webView else { return }
-                self.handleURLChange(wv.url ?? self.loginURL)
-            }
-        }
-    }
-
-    private func addCookieObserver(to wv: WKWebView) {
-        guard !hasObserver else { return }
-        wv.configuration.websiteDataStore.httpCookieStore.add(self)
-        hasObserver = true
     }
 }
 
