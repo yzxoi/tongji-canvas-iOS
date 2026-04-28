@@ -26,12 +26,8 @@ enum CookieHelper {
     /// Inject cookies into a WKWebsiteDataStore asynchronously.
     @MainActor
     static func inject(cookies: [HTTPCookie], into store: WKWebsiteDataStore) async {
-        await withTaskGroup(of: Void.self) { group in
-            for cookie in cookies {
-                group.addTask { @MainActor in
-                    await store.httpCookieStore.setCookie(cookie)
-                }
-            }
+        for cookie in cookies {
+            await store.httpCookieStore.setCookie(cookie)
         }
     }
 

@@ -40,13 +40,11 @@ final class BatchSignViewModel: ObservableObject {
     }
 
     private func signAll() async {
-        await withTaskGroup(of: Void.self) { group in
-            for session in sessions {
-                group.addTask { @MainActor [weak self] in
-                    await self?.sign(session: session)
-                }
-            }
+        var tasks: [Task<Void, Never>] = []
+        for session in sessions {
+            tasks.append(Task { await sign(session: session) })
         }
+        for task in tasks { await task.value }
     }
 
     private func sign(session: UserSession) async {
