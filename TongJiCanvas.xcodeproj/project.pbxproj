@@ -1,0 +1,391 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		251796CB0F5A03789B343186 /* CookieHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73F2F31C5236FA0C25E5A2C4 /* CookieHelper.swift */; };
+		2E230D72A97DCED321038CD2 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F624041DC5828033F0EBB8F4 /* LoginView.swift */; };
+		3DB54659C1A4114E78D384E7 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 082F809C0EC2E5DE2D73B434 /* MainView.swift */; };
+		62A9952BA4047AD8AEDDB9BB /* BatchSignView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A5209B647B49289C80BDFFF /* BatchSignView.swift */; };
+		64D28A5E245342FB16BC1241 /* UserSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E740D56EB8EE71D00869E6D /* UserSession.swift */; };
+		685648B77C25E67FEA47C68D /* Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFFDF2800632FC446A3C9204 /* Course.swift */; };
+		6AEE50BDEF6DCE3A1515625C /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBBA882C28E46EB67DD6E051 /* WebView.swift */; };
+		6DE2E17895143041AB65A0DB /* SessionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0988BFC771FEB7B61F1B5592 /* SessionCard.swift */; };
+		884F92942E6983B7D51AD4E4 /* SessionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42B2E1D193CBB0E4F10F10FF /* SessionRepository.swift */; };
+		9AAA7AF97A88F000A22B73E7 /* TongJiCanvasApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9AF5FC7F66E60903E447244 /* TongJiCanvasApp.swift */; };
+		A969FB44A0486F484E5B698B /* ScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F6778F75DB72559FA0B4D25 /* ScannerView.swift */; };
+		C08FBB94C109AC26EBECA1F7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5AD172DADA0F9DCCBBCA36AA /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		082F809C0EC2E5DE2D73B434 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
+		0988BFC771FEB7B61F1B5592 /* SessionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCard.swift; sourceTree = "<group>"; };
+		2A5209B647B49289C80BDFFF /* BatchSignView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchSignView.swift; sourceTree = "<group>"; };
+		42B2E1D193CBB0E4F10F10FF /* SessionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRepository.swift; sourceTree = "<group>"; };
+		49320E0908A6C5D806B59E91 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		5AD172DADA0F9DCCBBCA36AA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		6E740D56EB8EE71D00869E6D /* UserSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSession.swift; sourceTree = "<group>"; };
+		73F2F31C5236FA0C25E5A2C4 /* CookieHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookieHelper.swift; sourceTree = "<group>"; };
+		7F6778F75DB72559FA0B4D25 /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
+		AFFDF2800632FC446A3C9204 /* Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Course.swift; sourceTree = "<group>"; };
+		C3599CDDCA77A330B83E4308 /* TongJiCanvas.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TongJiCanvas.entitlements; sourceTree = "<group>"; };
+		CBBA882C28E46EB67DD6E051 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
+		E9AF5FC7F66E60903E447244 /* TongJiCanvasApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TongJiCanvasApp.swift; sourceTree = "<group>"; };
+		F4E5EC2F0656887F696CB32A /* TongJiCanvas.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TongJiCanvas.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F624041DC5828033F0EBB8F4 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		06D154079E1436EF780E66E3 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				42B2E1D193CBB0E4F10F10FF /* SessionRepository.swift */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		1E6725C4C464D092A6577C0C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F4E5EC2F0656887F696CB32A /* TongJiCanvas.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3522ECFFC601E754FEE77F97 /* TongJiCanvas */ = {
+			isa = PBXGroup;
+			children = (
+				C1CD0A8CCB1D5383EB2C0E14 /* Components */,
+				06D154079E1436EF780E66E3 /* Data */,
+				71BCF45FB537CDBA20905C57 /* Models */,
+				BE16A34CBBE63D65D4EE224C /* Utils */,
+				EE57497E7134409576670AE5 /* Views */,
+				5AD172DADA0F9DCCBBCA36AA /* Assets.xcassets */,
+				49320E0908A6C5D806B59E91 /* Info.plist */,
+				C3599CDDCA77A330B83E4308 /* TongJiCanvas.entitlements */,
+				E9AF5FC7F66E60903E447244 /* TongJiCanvasApp.swift */,
+			);
+			path = TongJiCanvas;
+			sourceTree = "<group>";
+		};
+		71BCF45FB537CDBA20905C57 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AFFDF2800632FC446A3C9204 /* Course.swift */,
+				6E740D56EB8EE71D00869E6D /* UserSession.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		9C5AC31E8AC0DE58BE386369 = {
+			isa = PBXGroup;
+			children = (
+				3522ECFFC601E754FEE77F97 /* TongJiCanvas */,
+				1E6725C4C464D092A6577C0C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BE16A34CBBE63D65D4EE224C /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				73F2F31C5236FA0C25E5A2C4 /* CookieHelper.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		C1CD0A8CCB1D5383EB2C0E14 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				0988BFC771FEB7B61F1B5592 /* SessionCard.swift */,
+				CBBA882C28E46EB67DD6E051 /* WebView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		EE57497E7134409576670AE5 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				2A5209B647B49289C80BDFFF /* BatchSignView.swift */,
+				F624041DC5828033F0EBB8F4 /* LoginView.swift */,
+				082F809C0EC2E5DE2D73B434 /* MainView.swift */,
+				7F6778F75DB72559FA0B4D25 /* ScannerView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B884004DBCA07EC1F89DAA83 /* TongJiCanvas */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 116955FDB7272CD36D800C9A /* Build configuration list for PBXNativeTarget "TongJiCanvas" */;
+			buildPhases = (
+				23894041C563B77809E5386A /* Sources */,
+				B2AA68AEC38F18A9E027660C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TongJiCanvas;
+			packageProductDependencies = (
+			);
+			productName = TongJiCanvas;
+			productReference = F4E5EC2F0656887F696CB32A /* TongJiCanvas.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		07A3D897EB0632F689503A14 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = 235C69F1C04E8AF7F9BA1B0F /* Build configuration list for PBXProject "TongJiCanvas" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 9C5AC31E8AC0DE58BE386369;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 1E6725C4C464D092A6577C0C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B884004DBCA07EC1F89DAA83 /* TongJiCanvas */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B2AA68AEC38F18A9E027660C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C08FBB94C109AC26EBECA1F7 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		23894041C563B77809E5386A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				62A9952BA4047AD8AEDDB9BB /* BatchSignView.swift in Sources */,
+				251796CB0F5A03789B343186 /* CookieHelper.swift in Sources */,
+				685648B77C25E67FEA47C68D /* Course.swift in Sources */,
+				2E230D72A97DCED321038CD2 /* LoginView.swift in Sources */,
+				3DB54659C1A4114E78D384E7 /* MainView.swift in Sources */,
+				A969FB44A0486F484E5B698B /* ScannerView.swift in Sources */,
+				6DE2E17895143041AB65A0DB /* SessionCard.swift in Sources */,
+				884F92942E6983B7D51AD4E4 /* SessionRepository.swift in Sources */,
+				9AAA7AF97A88F000A22B73E7 /* TongJiCanvasApp.swift in Sources */,
+				64D28A5E245342FB16BC1241 /* UserSession.swift in Sources */,
+				6AEE50BDEF6DCE3A1515625C /* WebView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		20996BF02E865304EA1E412C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		705E05307BEC0E62587D9FEE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		D9BDAD8331178BFC6828B573 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = TongJiCanvas/TongJiCanvas.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = TongJiCanvas/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mln.tongji-canvas-ios";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E2EB40EF41C5D1D4FAFF2C86 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = TongJiCanvas/TongJiCanvas.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = TongJiCanvas/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mln.tongji-canvas-ios";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		116955FDB7272CD36D800C9A /* Build configuration list for PBXNativeTarget "TongJiCanvas" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E2EB40EF41C5D1D4FAFF2C86 /* Debug */,
+				D9BDAD8331178BFC6828B573 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		235C69F1C04E8AF7F9BA1B0F /* Build configuration list for PBXProject "TongJiCanvas" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				20996BF02E865304EA1E412C /* Debug */,
+				705E05307BEC0E62587D9FEE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 07A3D897EB0632F689503A14 /* Project object */;
+}
