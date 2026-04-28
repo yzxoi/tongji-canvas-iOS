@@ -118,9 +118,10 @@ struct LoginWebViewWrapper: UIViewRepresentable {
         init(vm: LoginViewModel) { self.vm = vm }
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
-                     decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+                     preferences: WKWebpagePreferences,
+                     decisionHandler: @escaping @MainActor (WKNavigationActionPolicy, WKWebpagePreferences) -> Void) {
             if let url = action.request.url { vm.handleURLChange(url) }
-            decisionHandler(.allow)
+            decisionHandler(.allow, preferences)
         }
 
         func webView(_ webView: WKWebView, didFinish _: WKNavigation!) {

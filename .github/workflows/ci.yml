@@ -28,13 +28,16 @@ jobs:
         run: gem install xcpretty --no-document
 
       - name: Run unit tests
+        # Ad-hoc signing (CODE_SIGN_IDENTITY="-") is required so the Security
+        # framework can bind Keychain items to a code identity at runtime.
+        # CODE_SIGNING_ALLOWED=NO strips all signatures and causes SecItemAdd
+        # to fail silently for kSecAttrAccessibleWhenUnlockedThisDeviceOnly items.
         run: |
           set -o pipefail
           xcodebuild test \
             -project TongJiCanvas.xcodeproj \
             -scheme TongJiCanvas \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
           | xcpretty

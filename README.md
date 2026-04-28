@@ -1,136 +1,188 @@
-# 同济大学 Canvas 批量签到助手 — iOS 版
+# TongJi Canvas Batch Attendance — iOS Client
 
 [![CI](https://github.com/yzxoi/tongji-canvas-iOS/actions/workflows/ci.yml/badge.svg)](https://github.com/yzxoi/tongji-canvas-iOS/actions/workflows/ci.yml)
 
-> 同济大学 Canvas 系统课堂签到的 iOS 原生客户端，功能对齐 [Android 版](https://github.com/mmmlllnnn/TongJi_Canvas)。
+A native iOS application for concurrent multi-account attendance submission on the Tongji University Canvas LMS. The client is functionally equivalent to the [reference Android implementation](https://github.com/mmmlllnnn/TongJi_Canvas), re-architected for the iOS platform under Swift 6 strict concurrency.
 
 ---
 
-## ✨ 功能特性
+## Overview
 
-- **一键批量签到**：同时为多个账号完成课堂签到，并发执行、互不干扰
-- **在线登录自动捕获**：内嵌 WKWebView 完成统一认证，自动提取并保存认证信息（Cookie 永久有效，只需获取一次）
-- **手动录入 Cookie**：支持直接粘贴已有认证信息添加账号
-- **课程分组管理**：按课程将账号分组，一键选中整组参与签到
-- **剪贴板导入导出**：JSON 格式批量迁移账号与课程数据
-- **相机二维码扫描**：AVFoundation 原生扫码，支持小尺寸、倾斜二维码
+The Tongji University Canvas system gates attendance credit behind a session-cookie–authenticated HTTP endpoint (`/lms/mobile/forscan?courseCode=…&rollCallToken=…`). This application manages per-account credential lifecycle, submits concurrent HTTP requests to the attendance endpoint, and surfaces per-account results in real time.
 
-## 📱 界面预览
+The central engineering challenge is **per-user session isolation at concurrency scale**: unlike Android's globally mutable `CookieManager`, which forces sequential per-user cookie replacement, this implementation assigns each account an independent ephemeral `URLSession` configured with an explicit `Cookie` header — eliminating shared state and enabling true task-level parallelism.
 
-| 主界面 | 登录页 | 扫码页 | 批量签到 |
-|:---:|:---:|:---:|:---:|
-| 账号列表 + 分组 | 统一认证 WebView | 实时扫描 | 并发进度卡片 |
+---
 
-## 🛠 技术架构
+## Feature Set
+
+| Capability | Implementation |
+|---|---|
+| Concurrent batch sign-in | `withTaskGroup` over all selected accounts; each task is fully isolated |
+| OAuth2 credential capture | Embedded `WKWebView` with `WKHTTPCookieStoreObserver`; token persisted to Keychain |
+| Manual credential entry | Paste-based cookie import via `UITextView` |
+| Course-based account grouping | Many-to-many `Course ↔ UserSession` relationship; one-tap group selection |
+| JSON import / export | Clipboard-based migration; round-trip stable across app reinstalls |
+| QR code scanning | `AVCaptureMetadataOutput` with confirmation UI; supports skewed/small codes |
+| Persistent credential storage | `UserDefaults` for metadata, Keychain for session tokens |
+
+---
+
+## Architecture
 
 ```
 TongJiCanvas/
 ├── Models/
-│   ├── UserSession.swift        # 用户模型（Codable，accessToken 存 Keychain）
-│   └── Course.swift             # 课程/分组模型
+│   ├── UserSession.swift        # Value type; accessToken excluded from JSON encoding
+│   └── Course.swift             # Course/group model with member UUID references
 ├── Data/
-│   └── SessionRepository.swift  # CRUD + 导入导出，@MainActor，ObservableObject
+│   └── SessionRepository.swift  # @MainActor ObservableObject; CRUD + import/export
 ├── Extensions/
-│   └── Color+Hex.swift          # Color(hex:) 扩展
+│   └── Color+Hex.swift          # Convenience Color(hex:) initialiser
 ├── Utils/
-│   ├── CookieHelper.swift       # Cookie 字符串解析 / WKWebsiteDataStore 注入
-│   └── KeychainHelper.swift     # Keychain 安全存储 accessToken
+│   ├── CookieHelper.swift       # Cookie string parsing; WKWebsiteDataStore injection
+│   └── KeychainHelper.swift     # SecItem CRUD wrapper; kSecAttrService-scoped
 ├── Components/
-│   ├── WebView.swift            # WKWebView 封装
-│   └── SessionCard.swift        # 用户卡片 UI 组件
+│   ├── WebView.swift            # Generic WKWebView UIViewRepresentable
+│   └── SessionCard.swift        # Reusable account card component
 └── Views/
-    ├── MainView.swift           # 主界面：账号列表、课程分组、底部操作栏
-    ├── LoginView.swift          # OAuth2 登录 WebView
-    ├── LoginViewModel.swift     # 登录逻辑 ViewModel
-    ├── ManualAddView.swift      # 手动录入 Cookies
-    ├── EditSessionView.swift    # 编辑用户信息
-    ├── AddCourseView.swift      # 新建课程分组
-    ├── EditCourseView.swift     # 编辑课程分组
-    ├── ScannerView.swift        # 相机扫码（AVFoundation）
-    └── BatchSignView.swift      # 并发批量签到 + 实时进度
+    ├── MainView.swift           # Account list, course groups, action toolbar
+    ├── LoginView.swift          # IAM OAuth2 WebView shell
+    ├── LoginViewModel.swift     # Cookie capture state machine with countdown
+    ├── ManualAddView.swift      # Raw cookie paste entry
+    ├── EditSessionView.swift    # Account edit form
+    ├── AddCourseView.swift      # Course creation form
+    ├── EditCourseView.swift     # Course membership editor
+    ├── ScannerView.swift        # AVFoundation QR scanner + confirmation card
+    ├── BatchSignView.swift      # Concurrent sign-in progress UI
+    └── AboutView.swift          # Application metadata and credits
 TongJiCanvasTests/
-├── SessionRepositoryTests.swift # 仓库层单元测试
-└── KeychainHelperTests.swift    # Keychain 单元测试
+├── BatchSignViewModelTests.swift  # ViewModel state machine coverage
+├── CookieHelperTests.swift        # Cookie string parsing edge cases
+├── UserSessionTests.swift         # Model Codable invariants
+├── SessionRepositoryTests.swift   # Repository CRUD and import/export
+└── KeychainHelperTests.swift      # SecItem read/write/delete correctness
 ```
 
-**关键技术选型：**
+---
 
-| 功能 | 方案 | 说明 |
-|------|------|------|
-| UI 框架 | SwiftUI | 声明式 UI，全面覆盖 |
-| 状态管理 | `ObservableObject` + `@EnvironmentObject` | 共享 `SessionRepository` |
-| WebView | `WKWebView` + `WKWebsiteDataStore` | 每用户独立非持久化数据存储，真并发 |
-| Cookie 捕获 | `WKHTTPCookieStoreObserver` | 异步监听 `_canvas_middle_session` 写入 |
-| 批量签到 | `async/await` + `withTaskGroup` | 所有用户并发签到，互不阻塞 |
-| 扫码 | `AVCaptureMetadataOutput` | 系统原生，支持 QR / DataMatrix / Aztec |
-| 持久化 | `UserDefaults` + `JSONEncoder` | 轻量，无需 Core Data |
+## Technical Design
 
-**iOS vs Android Cookie 隔离对比：**
+### Session Isolation Strategy
 
-Android 版使用全局 `CookieManager`，批量签到时需逐用户顺序清空重设，存在竞争风险。iOS 版为每个用户创建独立的 `WKWebsiteDataStore.nonPersistent()` 实例，Cookie 完全沙箱隔离，多用户真正并发。
+Android's `CookieManager` is a process-wide singleton; concurrent sign-in attempts share a single cookie jar and must be serialised. This implementation avoids that bottleneck entirely:
 
-## 📋 使用指南
+```
+Per-account sign-in path
+─────────────────────────────────────────────────────────
+ URLSession (ephemeral)          ← no shared cookie storage
+   httpAdditionalHeaders:
+     Cookie: <account token>     ← injected per-request
+   timeoutIntervalForRequest: 5s
+   httpMaximumConnectionsPerHost: 8
+─────────────────────────────────────────────────────────
+```
 
-1. **添加账号**
-   - 点击底部 **添加账号** → **在线登录添加**，在统一认证页完成登录，系统自动提取 Cookie
-   - 或选择 **手动录入 Cookies**，粘贴已有认证信息
+Each account executes an independent `URLRequest` carrying its own `Cookie` header. No shared mutable state is accessed during flight; all accounts can proceed in true parallel.
 
-2. **管理分组**（可选）
-   - 点击 **新建课程分组**，将账号按课程分类，便于快速全选
+### Concurrency Model
 
-3. **批量签到**
-   - 勾选参与本次签到的账号（Toggle 开关）
-   - 点击底部 **一键签到**，对准课堂二维码扫描
-   - 进入签到页，实时查看每个账号的签到结果
+`BatchSignViewModel` is `@MainActor`-isolated. Network operations are dispatched via `nonisolated static` methods that execute on the cooperative thread pool, returning `SignResult` value types back to the actor:
 
-4. **导入导出**
-   - 右上角菜单 → **导出到剪贴板**，JSON 格式包含账号与课程分组
-   - 在新设备粘贴后 → **从剪贴板导入**，一键迁移
+```swift
+// Off-actor network call — no MainActor crossing required
+private nonisolated static func performSign(url: URL, cookieValue: String) async -> SignResult
 
-## ⚙️ 构建要求
+// Coordinated on the actor
+private func signAll() async {
+    await withTaskGroup(of: Void.self) { group in
+        for session in sessions {
+            group.addTask { [weak self] in await self?.sign(session: session) }
+        }
+    }
+}
+```
 
-| 项目 | 要求 |
-|------|------|
+### Credential Storage
+
+Session tokens are stored in the iOS Keychain under a per-account UUID key, scoped to `kSecAttrService = "com.tongji.canvas"` with `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`. `UserSession` deliberately excludes `accessToken` from its `CodingKeys`, preventing accidental token serialisation to `UserDefaults`.
+
+### Login Detection
+
+The `LoginViewModel` observes `WKHTTPCookieStoreObserver` notifications on the default `WKWebsiteDataStore`. Detection requires two conditions to hold simultaneously to guard against false positives:
+
+1. The current URL's host must contain `canvas.tongji.edu.cn` (not an IAM intermediate page)
+2. At least one cookie named `_canvas_middle_session` is present in the store
+
+On detection, a 3-second countdown fires before automatic capture, giving the user an opportunity to inspect the result.
+
+---
+
+## Test Suite
+
+48 tests across 5 suites, validated under Swift Testing:
+
+| Suite | Tests | Notes |
+|---|---|---|
+| `BatchSignViewModelTests` | 13 | progress, counts, `hasActiveSigning`, `toggleExpanded`, `SignStatus` labels/icons |
+| `CookieHelperTests` | 9 | `parseCookies` — single, multiple, equals-in-value, empty name, custom domain, real-world string |
+| `UserSessionTests` | 5 | UUID generation, `hasCredentials`, Codable round-trip (token exclusion), `Equatable` |
+| `SessionRepositoryTests` | 16 | CRUD, Keychain persistence, reload survival, import/export, `selectedIds` |
+| `KeychainHelperTests` | 7 | `SecItemAdd`/`SecItemCopyMatching`/`SecItemDelete`, overwrite, empty value, special chars |
+
+`SessionRepositoryTests` is annotated `@Suite(.serialized)` to prevent concurrent `UserDefaults` mutation between test cases. `KeychainHelperTests` uses per-test UUID-scoped keys for full concurrency safety.
+
+---
+
+## Authentication Protocol
+
+Tongji University Canvas implements a Unified Identity Authentication (IAM) flow fronting an OAuth 2.0 authorisation server. Upon successful authentication, a long-lived session cookie — primarily `_canvas_middle_session` — is written to the `canvas.tongji.edu.cn` origin. This token remains valid indefinitely (no server-side expiry has been observed in practice), requiring acquisition only once per account.
+
+Attendance is recorded by performing a GET request to:
+
+```
+https://canvas.tongji.edu.cn/lms/mobile/forscan?courseCode=<CODE>&rollCallToken=<TOKEN>
+```
+
+with the session cookie in the `Cookie` request header. A response body containing `签到成功` (success) or `已签过` (already signed) is treated as a successful outcome; a redirect to the IAM login page indicates session expiry.
+
+---
+
+## Building
+
+### Requirements
+
+| | |
+|---|---|
 | Xcode | 15.0+ |
-| iOS 最低版本 | 17.0 |
+| iOS Deployment Target | 17.0 |
 | Swift | 6.0 |
-| 第三方依赖 | 无 |
+| Third-party dependencies | None |
 
-### 构建步骤
+### Steps
 
 ```bash
-# 克隆仓库
 git clone git@github.com:yzxoi/tongji-canvas-iOS.git
 cd tongji-canvas-iOS
 
-# （可选）用 xcodegen 重新生成项目文件
+# Regenerate the Xcode project from the xcodegen spec (optional — project.pbxproj is committed)
 brew install xcodegen
 xcodegen generate
 
-# 用 Xcode 打开
 open TongJiCanvas.xcodeproj
 ```
 
-在 Xcode 中选择目标设备，配置开发者签名（Signing），Build & Run。
+Select a simulator or connected device, configure a signing team under *Signing & Capabilities*, then build and run.
 
-### 权限说明
+### Required Permissions
 
-| 权限 | 用途 |
-|------|------|
-| `NSCameraUsageDescription` | 扫描签到二维码 |
+| Key | Purpose |
+|---|---|
+| `NSCameraUsageDescription` | QR code scanning via `AVCaptureSession` |
 
-## 📖 认证原理
+---
 
-同济 Canvas 采用统一身份认证（IAM）+ OAuth2.0 流程，登录后 `canvas.tongji.edu.cn` 域下会写入 Session Cookie（`_canvas_middle_session` 等）。该 Cookie 在服务端绑定用户身份，**长期有效**，无需重复登录。
+## Related Projects
 
-签到 URL 格式：
-```
-https://canvas.tongji.edu.cn/lms/mobile/forscan?courseCode=XXXX&rollCallToken=XXXX
-```
-
-携带用户 Cookie 访问该 URL，若页面返回"签到成功"或"已签过"则视为完成。
-
-## 🤝 相关项目
-
-- [Android 版](https://github.com/mmmlllnnn/TongJi_Canvas) — 原版，Kotlin + Jetpack Compose
-- [Web 版](https://github.com/mmmlllnnn/TongJi_Canvas_Web) — 无需安装，浏览器直接使用
+- [Android client](https://github.com/mmmlllnnn/TongJi_Canvas) — reference implementation in Kotlin + Jetpack Compose
+- [Web client](https://github.com/mmmlllnnn/TongJi_Canvas_Web) — browser-based variant, no installation required

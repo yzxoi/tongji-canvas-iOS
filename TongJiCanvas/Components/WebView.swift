@@ -36,9 +36,10 @@ struct WebViewRepresentable: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
-                     decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+                     preferences: WKWebpagePreferences,
+                     decisionHandler: @escaping @MainActor (WKNavigationActionPolicy, WKWebpagePreferences) -> Void) {
             parent.onURLChange?(action.request.url ?? URL(string: "about:blank")!)
-            decisionHandler(.allow)
+            decisionHandler(.allow, preferences)
         }
     }
 }
