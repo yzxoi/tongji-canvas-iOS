@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@MainActor
 final class SessionRepository: ObservableObject {
     @Published private(set) var sessions: [UserSession] = []
     @Published private(set) var courses: [Course] = []
@@ -16,7 +17,13 @@ final class SessionRepository: ObservableObject {
 
     private func load() {
         if let d = defaults.data(forKey: sessionsKey),
-           let v = try? JSONDecoder().decode([UserSession].self, from: d) { sessions = v }
+           let v = try? JSONDecoder().decode([UserSession].self, from: d) {
+            sessions = v
+            // Restore tokens from Keychain
+            for i in sessions.indices {
+                sessions[i].accessToken = KeychainHelper.read(key: sessions[i].id.uuidString)
+            }
+        }
         if let d = defaults.data(forKey: coursesKey),
            let v = try? JSONDecoder().decode([Course].self, from: d)  { courses = v }
     }
@@ -33,22 +40,36 @@ final class SessionRepository: ObservableObject {
 
     @discardableResult
     func addOrUpdate(displayName: String, accessToken: String?) -> UserSession {
+        let session: UserSession
         if let idx = sessions.firstIndex(where: { $0.displayName == displayName }) {
             sessions[idx].accessToken = accessToken
-            sessions[idx].lastVerifiedAt = Date()
             saveSessions()
-            return sessions[idx]
+            session = sessions[idx]
+        } else {
+            let s = UserSession(displayName: displayName, accessToken: accessToken)
+            sessions.append(s)
+            saveSessions()
+            session = s
         }
-        let s = UserSession(displayName: displayName, accessToken: accessToken, lastVerifiedAt: Date())
-        sessions.append(s)
-        saveSessions()
-        return s
+        if let token = accessToken, !token.isEmpty {
+            KeychainHelper.save(key: session.id.uuidString, value: token)
+        } else {
+            KeychainHelper.delete(key: session.id.uuidString)
+        }
+        return session
     }
 
     func update(_ session: UserSession) {
         guard let idx = sessions.firstIndex(where: { $0.id == session.id }) else { return }
         sessions[idx] = session
         saveSessions()
+        // Sync token to Keychain
+        let key = session.id.uuidString
+        if let token = session.accessToken, !token.isEmpty {
+            KeychainHelper.save(key: key, value: token)
+        } else {
+            KeychainHelper.delete(key: key)
+        }
     }
 
     func remove(sessionId: UUID) {
@@ -56,6 +77,7 @@ final class SessionRepository: ObservableObject {
         for i in courses.indices { courses[i].memberIds.removeAll { $0 == sessionId } }
         saveSessions()
         saveCourses()
+        KeychainHelper.delete(key: sessionId.uuidString)
     }
 
     // MARK: - Courses
@@ -96,7 +118,10 @@ final class SessionRepository: ObservableObject {
     // MARK: - Import / Export
 
     func exportJSON() -> String {
-        let users = sessions.map { ["displayName": $0.displayName, "accessToken": $0.accessToken ?? ""] as [String: Any] }
+        let users = sessions.map { s -> [String: Any] in
+            ["displayName": s.displayName,
+             "accessToken": s.accessToken ?? ""]
+        }
         let courseList = courses.map { c -> [String: Any] in
             let names = c.memberIds.compactMap { id in sessions.first { $0.id == id }?.displayName }
             return ["name": c.name, "members": names]

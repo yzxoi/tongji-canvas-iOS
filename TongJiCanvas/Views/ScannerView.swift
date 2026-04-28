@@ -22,7 +22,11 @@ struct ScannerView: View {
         }
         .onAppear { vm.start() }
         .onDisappear { vm.stop() }
-        // 不在这里自动导航：让用户在底部卡片确认后再触发
+        // Auto-trigger sign-in flow when a valid URL is detected; invalid QRs
+        // still surface the retry card so the user knows why nothing happened.
+        .onChange(of: vm.detectedURL) { _, url in
+            if let url { onDetected(url) }
+        }
     }
 
     // MARK: - Top feedback
@@ -92,43 +96,19 @@ struct ScannerView: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: vm.isPaused)
     }
 
-    // MARK: - Detected card (success or invalid)
+    // MARK: - Detected card (only invalid QR; valid URLs auto-trigger)
 
     @ViewBuilder
     private var detectedCard: some View {
-        if let url = vm.detectedURL {
-            // ── 有效签到链接 ──────────────────────────────────
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                    Text("签到链接已识别").font(.subheadline.weight(.semibold))
-                    Spacer()
-                }
-
-                Text(url.absoluteString)
-                    .font(.caption)
+        if vm.detectedURL != nil {
+            // ── 有效签到链接 — 已自动触发,只显示过渡反馈 ────────────
+            VStack(spacing: 12) {
+                ProgressView()
+                Text("正在跳转签到…")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(3)
-
-                HStack(spacing: 12) {
-                    Button {
-                        vm.resume()
-                    } label: {
-                        Label("重新扫描", systemImage: "arrow.counterclockwise")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button {
-                        onDetected(url)
-                    } label: {
-                        Label("开始签到", systemImage: "checkmark")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color(hex: 0x7C3AED))
-                }
             }
+            .frame(maxWidth: .infinity)
             .padding(20)
             .background(.regularMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 24))

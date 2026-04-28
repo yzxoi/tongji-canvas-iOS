@@ -11,16 +11,6 @@ private let avatarStyles: [(bg: Color, fg: Color)] = [
     (Color(hex: 0xF7E5FF), Color(hex: 0x8A32B8))
 ]
 
-extension Color {
-    init(hex: UInt32) {
-        self.init(
-            red:   Double((hex >> 16) & 0xFF) / 255,
-            green: Double((hex >>  8) & 0xFF) / 255,
-            blue:  Double( hex        & 0xFF) / 255
-        )
-    }
-}
-
 // MARK: - SessionCard
 
 struct SessionCard: View {
@@ -50,8 +40,8 @@ struct SessionCard: View {
             RoundedRectangle(cornerRadius: 24)
                 .strokeBorder(isSelected ? Color(hex: 0xB8A2FF) : Color(.separator), lineWidth: isSelected ? 2 : 1)
         )
-        .shadow(color: isSelected ? Color(hex: 0xB8A2FF).opacity(0.35) : .black.opacity(0.06),
-                radius: isSelected ? 8 : 2, y: 2)
+        .shadow(color: isSelected ? Color(hex: 0xB8A2FF).opacity(0.35) : Color(.systemBackground).opacity(0.0),
+                radius: isSelected ? 8 : 0, y: isSelected ? 2 : 0)
         .contentShape(Rectangle())
         .onTapGesture { onEdit() }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {

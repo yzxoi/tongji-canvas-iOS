@@ -1,21 +1,40 @@
 import SwiftUI
 
+// MARK: - Color scheme mode
+
+enum ColorSchemeMode: Int {
+    case system = 0, light, dark
+    var label: String {
+        switch self {
+        case .system: "跟随系统"
+        case .light:  "浅色模式"
+        case .dark:   "深色模式"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .system: "circle.lefthalf.filled"
+        case .light:  "sun.max.fill"
+        case .dark:   "moon.fill"
+        }
+    }
+}
+
 struct MainView: View {
     @EnvironmentObject var repo: SessionRepository
+    @AppStorage("colorSchemeMode") private var schemeMode: Int = ColorSchemeMode.system.rawValue
 
-    // Selection
     @State private var selectedIds: Set<UUID> = []
-
-    // Navigation
     @State private var showAddSheet        = false
     @State private var showOAuthLogin      = false
     @State private var showManualAdd       = false
     @State private var showScanner         = false
-    @State private var attendanceURL: URL? = nil
+    @State private var attendanceURL: AttendanceLink? = nil
 
     // Course state
     @State private var allUsersExpanded = true
     @State private var showAddCourse    = false
+    @State private var showAbout        = false
 
     // Edit
     @State private var editingSession: UserSession? = nil
@@ -26,16 +45,23 @@ struct MainView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
-                listContent
-                    .navigationTitle("批量签到")
-                    .toolbar { toolbarItems }
-                floatingDock
-            }
+            listContent
+                .navigationTitle("批量签到")
+                .toolbar { toolbarItems }
+                .safeAreaInset(edge: .bottom) {
+                    floatingDock
+                        .padding(EdgeInsets(top: 0, leading: 12, bottom: 4, trailing: 12))
+                }
+                .navigationDestination(item: $attendanceURL) { link in
+                    BatchSignView(
+                        attendanceURL: link.url,
+                        selectedIds: selectedIds
+                    )
+                }
         }
+        .preferredColorScheme(colorScheme)
         .onAppear { selectedIds = repo.selectedIds }
         .onChange(of: selectedIds) { _, new in repo.selectedIds = new }
-        // Sheets & navigation
         .sheet(isPresented: $showOAuthLogin) {
             LoginView { repo.selectedIds = selectedIds }
         }
@@ -51,17 +77,14 @@ struct MainView: View {
         .sheet(isPresented: $showAddCourse) {
             AddCourseView()
         }
+        .sheet(isPresented: $showAbout) {
+            AboutView()
+        }
         .fullScreenCover(isPresented: $showScanner) {
             ScannerView { url in
-                attendanceURL = url
-                showScanner   = false
+                showScanner = false
+                attendanceURL = AttendanceLink(url: url)
             }
-        }
-        .navigationDestination(item: $attendanceURL) { url in
-            BatchSignView(
-                attendanceURL: url,
-                selectedIds: selectedIds
-            )
         }
         .overlay(toastOverlay)
     }
@@ -70,7 +93,6 @@ struct MainView: View {
 
     private var listContent: some View {
         List {
-            // ── All users section ─────────────────────────────
             Section {
                 if allUsersExpanded {
                     ForEach(repo.sessions) { session in
@@ -96,11 +118,9 @@ struct MainView: View {
                 ) { allUsersExpanded.toggle() }
             }
 
-            // ── Course sections ───────────────────────────────
             ForEach(repo.courses) { course in
                 let members = repo.sessions.filter { course.memberIds.contains($0.id) }
                 Section {
-                    // No rows shown inside courses (not expanded list, just header with select-all)
                 } header: {
                     CourseGroupHeader(
                         course: course,
@@ -116,7 +136,6 @@ struct MainView: View {
                 }
             }
 
-            // ── Add course button ─────────────────────────────
             Section {
                 Button {
                     showAddCourse = true
@@ -125,13 +144,8 @@ struct MainView: View {
                         .frame(maxWidth: .infinity)
                         .foregroundStyle(Color(hex: 0x7C3AED))
                 }
-                .listRowBackground(Color(hex: 0xF0F0FF))
+                .listRowBackground(Color(hex: 0x7C3AED).opacity(0.08))
             }
-
-            // Bottom spacer so the dock doesn't cover content
-            Section { Color.clear.frame(height: 80) }
-                .listRowBackground(Color(.systemGroupedBackground))
-                .listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.visible)
@@ -164,54 +178,65 @@ struct MainView: View {
     // MARK: - Floating dock
 
     private var floatingDock: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Button {
                 showAddSheet = true
             } label: {
                 Label("添加账号", systemImage: "plus")
+                    .font(.subheadline.weight(.medium))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .frame(height: 48)
                     .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                     .foregroundStyle(Color(.label))
             }
+            .buttonStyle(.plain)
 
             let canSign = !selectedIds.isEmpty
             Button {
                 guard canSign else { return }
                 showScanner = true
             } label: {
-                HStack {
-                    Image(systemName: "qrcode.viewfinder")
-                    Text(selectedIds.isEmpty ? "一键签到" : "一键签到（\(selectedIds.count)）")
-                        .lineLimit(1)
-                }
+                Label(
+                    selectedIds.isEmpty ? "一键签到" : "签到（\(selectedIds.count)）",
+                    systemImage: "qrcode.viewfinder"
+                )
+                .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .frame(height: 48)
                 .background(
-                    LinearGradient(
-                        colors: canSign ? [Color(hex: 0x7C3AED), Color(hex: 0x9333EA)] : [Color(.systemFill), Color(.systemFill)],
+                    canSign
+                    ? LinearGradient(
+                        colors: [Color(hex: 0x7C3AED), Color(hex: 0x9333EA)],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                    : LinearGradient(
+                        colors: [Color(.systemFill), Color(.systemFill)],
                         startPoint: .leading, endPoint: .trailing
                     )
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 24))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
                 .foregroundStyle(canSign ? .white : Color(.secondaryLabel))
             }
             .disabled(!canSign)
+            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 24)
-        .background(
-            .ultraThinMaterial,
-            in: RoundedRectangle(cornerRadius: 32)
-        )
-        .padding(.horizontal, 12)
-        .padding(.bottom, 8)
-        // Add-account action sheet
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
         .confirmationDialog("添加账号", isPresented: $showAddSheet) {
             Button("在线登录添加（自动捕获 Cookies）") { showOAuthLogin = true }
             Button("手动录入 Cookies") { showManualAdd = true }
             Button("取消", role: .cancel) {}
+        }
+    }
+
+    // MARK: - Color scheme
+
+    private var colorScheme: ColorScheme? {
+        switch ColorSchemeMode(rawValue: schemeMode) ?? .system {
+        case .system: nil
+        case .light:  .light
+        case .dark:   .dark
         }
     }
 
@@ -221,6 +246,23 @@ struct MainView: View {
     private var toolbarItems: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
+                Menu {
+                    ForEach([ColorSchemeMode.system, .light, .dark], id: \.rawValue) { mode in
+                        Button {
+                            schemeMode = mode.rawValue
+                        } label: {
+                            Label(mode.label, systemImage: mode.icon)
+                        }
+                    }
+                } label: {
+                    let current = ColorSchemeMode(rawValue: schemeMode) ?? .system
+                    Label("外观: \(current.label)", systemImage: current.icon)
+                }
+                Divider()
+                Button { showAbout = true } label: {
+                    Label("关于", systemImage: "info.circle")
+                }
+                Divider()
                 Button(action: importFromClipboard) {
                     Label("从剪贴板导入", systemImage: "doc.on.clipboard")
                 }
@@ -259,11 +301,10 @@ struct MainView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { toastMessage = nil }
     }
 
-    @ViewBuilder
     private var toastOverlay: some View {
-        if let msg = toastMessage {
-            VStack {
-                Spacer()
+        VStack {
+            Spacer()
+            if let msg = toastMessage {
                 Text(msg)
                     .font(.subheadline)
                     .padding(.horizontal, 20).padding(.vertical, 12)
@@ -273,8 +314,8 @@ struct MainView: View {
                     .padding(.bottom, 120)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .animation(.spring(), value: toastMessage)
         }
+        .animation(.spring(), value: toastMessage)
     }
 }
 
@@ -311,4 +352,11 @@ private struct CourseGroupHeader: View {
         .onTapGesture { onTap() }
         .textCase(nil)
     }
+}
+
+// MARK: - Identifiable wrapper
+
+struct AttendanceLink: Identifiable, Hashable {
+    let id = UUID()
+    let url: URL
 }

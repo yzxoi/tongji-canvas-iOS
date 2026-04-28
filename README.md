@@ -1,5 +1,7 @@
 # 同济大学 Canvas 批量签到助手 — iOS 版
 
+[![CI](https://github.com/yzxoi/tongji-canvas-iOS/actions/workflows/ci.yml/badge.svg)](https://github.com/yzxoi/tongji-canvas-iOS/actions/workflows/ci.yml)
+
 > 同济大学 Canvas 系统课堂签到的 iOS 原生客户端，功能对齐 [Android 版](https://github.com/mmmlllnnn/TongJi_Canvas)。
 
 ---
@@ -24,20 +26,31 @@
 ```
 TongJiCanvas/
 ├── Models/
-│   ├── UserSession.swift        # 用户模型（Codable，UserDefaults 持久化）
+│   ├── UserSession.swift        # 用户模型（Codable，accessToken 存 Keychain）
 │   └── Course.swift             # 课程/分组模型
 ├── Data/
-│   └── SessionRepository.swift  # CRUD + 导入导出，ObservableObject
+│   └── SessionRepository.swift  # CRUD + 导入导出，@MainActor，ObservableObject
+├── Extensions/
+│   └── Color+Hex.swift          # Color(hex:) 扩展
 ├── Utils/
-│   └── CookieHelper.swift       # Cookie 字符串解析 / WKWebsiteDataStore 注入
+│   ├── CookieHelper.swift       # Cookie 字符串解析 / WKWebsiteDataStore 注入
+│   └── KeychainHelper.swift     # Keychain 安全存储 accessToken
 ├── Components/
-│   ├── WebView.swift            # WKWebView 封装 + 异步签到 helper（SigningWebView）
+│   ├── WebView.swift            # WKWebView 封装
 │   └── SessionCard.swift        # 用户卡片 UI 组件
 └── Views/
     ├── MainView.swift           # 主界面：账号列表、课程分组、底部操作栏
-    ├── LoginView.swift          # OAuth2 登录、手动录入、账号/课程编辑
+    ├── LoginView.swift          # OAuth2 登录 WebView
+    ├── LoginViewModel.swift     # 登录逻辑 ViewModel
+    ├── ManualAddView.swift      # 手动录入 Cookies
+    ├── EditSessionView.swift    # 编辑用户信息
+    ├── AddCourseView.swift      # 新建课程分组
+    ├── EditCourseView.swift     # 编辑课程分组
     ├── ScannerView.swift        # 相机扫码（AVFoundation）
     └── BatchSignView.swift      # 并发批量签到 + 实时进度
+TongJiCanvasTests/
+├── SessionRepositoryTests.swift # 仓库层单元测试
+└── KeychainHelperTests.swift    # Keychain 单元测试
 ```
 
 **关键技术选型：**

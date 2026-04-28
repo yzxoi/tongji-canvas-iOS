@@ -3,14 +3,17 @@ import Foundation
 struct UserSession: Codable, Identifiable, Equatable {
     var id: UUID
     var displayName: String
+    /// Stored in Keychain, excluded from UserDefaults persistence.
     var accessToken: String?
-    var lastVerifiedAt: Date?
 
-    init(id: UUID = UUID(), displayName: String, accessToken: String? = nil, lastVerifiedAt: Date? = nil) {
+    enum CodingKeys: String, CodingKey {
+        case id, displayName
+    }
+
+    init(id: UUID = UUID(), displayName: String, accessToken: String? = nil) {
         self.id = id
         self.displayName = displayName
         self.accessToken = accessToken
-        self.lastVerifiedAt = lastVerifiedAt
     }
 
     var hasCredentials: Bool { !(accessToken?.isEmpty ?? true) }

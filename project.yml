@@ -21,6 +21,10 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         ENABLE_HARDENED_RUNTIME: NO
+        CODE_SIGN_STYLE: Automatic
+      configs:
+        Debug:
+          ENABLE_TESTABILITY: YES
     info:
       path: TongJiCanvas/Info.plist
       properties:
@@ -38,3 +42,39 @@ targets:
       path: TongJiCanvas/TongJiCanvas.entitlements
       properties:
         com.apple.security.app-sandbox: false
+
+  TongJiCanvasTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: TongJiCanvasTests
+    dependencies:
+      - target: TongJiCanvas
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.mln.tongji-canvas-ios-tests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+      configs:
+        Debug:
+          TEST_HOST: "$(BUILT_PRODUCTS_DIR)/TongJiCanvas.app/TongJiCanvas"
+          BUNDLE_LOADER: "$(TEST_HOST)"
+
+schemes:
+  TongJiCanvas:
+    build:
+      targets:
+        TongJiCanvas: all
+        TongJiCanvasTests:
+          testing: true
+          running: false
+          profiling: false
+          analyzing: false
+          archiving: false
+    run:
+      config: Release
+    test:
+      config: Debug
+      targets: [TongJiCanvasTests]

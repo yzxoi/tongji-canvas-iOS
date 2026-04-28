@@ -8,34 +8,71 @@
 
 /* Begin PBXBuildFile section */
 		251796CB0F5A03789B343186 /* CookieHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73F2F31C5236FA0C25E5A2C4 /* CookieHelper.swift */; };
+		2A785B1A036C0A9E5667D0D9 /* ManualAddView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC84A3109F33065D8B44942 /* ManualAddView.swift */; };
 		2E230D72A97DCED321038CD2 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F624041DC5828033F0EBB8F4 /* LoginView.swift */; };
 		3DB54659C1A4114E78D384E7 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 082F809C0EC2E5DE2D73B434 /* MainView.swift */; };
+		3EF6B40427EC3A844D0EDB7A /* BatchSignViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FF1AC2E49D08BC4857E2C9 /* BatchSignViewModelTests.swift */; };
+		4C1A4AFB3A0D6767A0526681 /* LoginViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3327EBC714B203EF57BFECB3 /* LoginViewModel.swift */; };
+		6003D5BB924CCC84B067D77E /* EditSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEC5128A4F26F2D100A7BBEB /* EditSessionView.swift */; };
 		62A9952BA4047AD8AEDDB9BB /* BatchSignView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A5209B647B49289C80BDFFF /* BatchSignView.swift */; };
+		646A8530F9EBAAF2114CCB4B /* EditCourseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45237AEB7561F97F73C02B8 /* EditCourseView.swift */; };
 		64D28A5E245342FB16BC1241 /* UserSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E740D56EB8EE71D00869E6D /* UserSession.swift */; };
 		685648B77C25E67FEA47C68D /* Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFFDF2800632FC446A3C9204 /* Course.swift */; };
 		6AEE50BDEF6DCE3A1515625C /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBBA882C28E46EB67DD6E051 /* WebView.swift */; };
 		6DE2E17895143041AB65A0DB /* SessionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0988BFC771FEB7B61F1B5592 /* SessionCard.swift */; };
+		727E50D7D0180DCBE6BB0316 /* KeychainHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11CF04CA218B9122E0AA9EFD /* KeychainHelperTests.swift */; };
+		7DC369CF2957DAED78EFBD5F /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F9FE2FCFC62FAB12444918 /* KeychainHelper.swift */; };
 		884F92942E6983B7D51AD4E4 /* SessionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42B2E1D193CBB0E4F10F10FF /* SessionRepository.swift */; };
+		8D63A739277AA967C53D77B7 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F993CC85621130EA4B0E6E9 /* AboutView.swift */; };
+		8FE4547CAED2602FCE274A09 /* CookieHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8E8490E4A390FA08AA4503 /* CookieHelperTests.swift */; };
 		9AAA7AF97A88F000A22B73E7 /* TongJiCanvasApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9AF5FC7F66E60903E447244 /* TongJiCanvasApp.swift */; };
 		A969FB44A0486F484E5B698B /* ScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F6778F75DB72559FA0B4D25 /* ScannerView.swift */; };
+		AA192A00FC0DCFB84D28112C /* AddCourseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 820BE85A0AA45F716D740F02 /* AddCourseView.swift */; };
+		AB93CF1E046B8B3F405E2C9A /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA4CDAF14DBDE7B02F70777C /* Color+Hex.swift */; };
 		C08FBB94C109AC26EBECA1F7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5AD172DADA0F9DCCBBCA36AA /* Assets.xcassets */; };
+		C76B9E4BC5681074D555B13C /* UserSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78C01D8CBA8F1F246BE8B124 /* UserSessionTests.swift */; };
+		E363F0A0CF66B6E364D74033 /* SessionRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C63887E4D60168C1BC4C091 /* SessionRepositoryTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A8DE507A243F9A0591DF5F64 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 07A3D897EB0632F689503A14 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B884004DBCA07EC1F89DAA83;
+			remoteInfo = TongJiCanvas;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		082F809C0EC2E5DE2D73B434 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		0988BFC771FEB7B61F1B5592 /* SessionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCard.swift; sourceTree = "<group>"; };
+		11CF04CA218B9122E0AA9EFD /* KeychainHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelperTests.swift; sourceTree = "<group>"; };
 		2A5209B647B49289C80BDFFF /* BatchSignView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchSignView.swift; sourceTree = "<group>"; };
+		3327EBC714B203EF57BFECB3 /* LoginViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
+		3C63887E4D60168C1BC4C091 /* SessionRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRepositoryTests.swift; sourceTree = "<group>"; };
 		42B2E1D193CBB0E4F10F10FF /* SessionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRepository.swift; sourceTree = "<group>"; };
 		49320E0908A6C5D806B59E91 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		5AD172DADA0F9DCCBBCA36AA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5F993CC85621130EA4B0E6E9 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		64FF1AC2E49D08BC4857E2C9 /* BatchSignViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchSignViewModelTests.swift; sourceTree = "<group>"; };
+		6A8E8490E4A390FA08AA4503 /* CookieHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookieHelperTests.swift; sourceTree = "<group>"; };
 		6E740D56EB8EE71D00869E6D /* UserSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSession.swift; sourceTree = "<group>"; };
 		73F2F31C5236FA0C25E5A2C4 /* CookieHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookieHelper.swift; sourceTree = "<group>"; };
+		78C01D8CBA8F1F246BE8B124 /* UserSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSessionTests.swift; sourceTree = "<group>"; };
 		7F6778F75DB72559FA0B4D25 /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
+		820BE85A0AA45F716D740F02 /* AddCourseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCourseView.swift; sourceTree = "<group>"; };
+		8E99D6C97C21C7AE2F187294 /* TongJiCanvasTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TongJiCanvasTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A45237AEB7561F97F73C02B8 /* EditCourseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditCourseView.swift; sourceTree = "<group>"; };
+		A5F9FE2FCFC62FAB12444918 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
+		AEC5128A4F26F2D100A7BBEB /* EditSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSessionView.swift; sourceTree = "<group>"; };
 		AFFDF2800632FC446A3C9204 /* Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Course.swift; sourceTree = "<group>"; };
 		C3599CDDCA77A330B83E4308 /* TongJiCanvas.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TongJiCanvas.entitlements; sourceTree = "<group>"; };
 		CBBA882C28E46EB67DD6E051 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
+		CCC84A3109F33065D8B44942 /* ManualAddView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualAddView.swift; sourceTree = "<group>"; };
+		DA4CDAF14DBDE7B02F70777C /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
 		E9AF5FC7F66E60903E447244 /* TongJiCanvasApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TongJiCanvasApp.swift; sourceTree = "<group>"; };
-		F4E5EC2F0656887F696CB32A /* TongJiCanvas.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TongJiCanvas.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F4E5EC2F0656887F696CB32A /* TongJiCanvas.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TongJiCanvas.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F624041DC5828033F0EBB8F4 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -52,6 +89,7 @@
 			isa = PBXGroup;
 			children = (
 				F4E5EC2F0656887F696CB32A /* TongJiCanvas.app */,
+				8E99D6C97C21C7AE2F187294 /* TongJiCanvasTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -61,6 +99,7 @@
 			children = (
 				C1CD0A8CCB1D5383EB2C0E14 /* Components */,
 				06D154079E1436EF780E66E3 /* Data */,
+				3D28D0D326F83DE28EBF2973 /* Extensions */,
 				71BCF45FB537CDBA20905C57 /* Models */,
 				BE16A34CBBE63D65D4EE224C /* Utils */,
 				EE57497E7134409576670AE5 /* Views */,
@@ -72,6 +111,14 @@
 			path = TongJiCanvas;
 			sourceTree = "<group>";
 		};
+		3D28D0D326F83DE28EBF2973 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				DA4CDAF14DBDE7B02F70777C /* Color+Hex.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
 		71BCF45FB537CDBA20905C57 /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -81,10 +128,23 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		814A9FFA7AD7A979B5DEAB4B /* TongJiCanvasTests */ = {
+			isa = PBXGroup;
+			children = (
+				64FF1AC2E49D08BC4857E2C9 /* BatchSignViewModelTests.swift */,
+				6A8E8490E4A390FA08AA4503 /* CookieHelperTests.swift */,
+				11CF04CA218B9122E0AA9EFD /* KeychainHelperTests.swift */,
+				3C63887E4D60168C1BC4C091 /* SessionRepositoryTests.swift */,
+				78C01D8CBA8F1F246BE8B124 /* UserSessionTests.swift */,
+			);
+			path = TongJiCanvasTests;
+			sourceTree = "<group>";
+		};
 		9C5AC31E8AC0DE58BE386369 = {
 			isa = PBXGroup;
 			children = (
 				3522ECFFC601E754FEE77F97 /* TongJiCanvas */,
+				814A9FFA7AD7A979B5DEAB4B /* TongJiCanvasTests */,
 				1E6725C4C464D092A6577C0C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -93,6 +153,7 @@
 			isa = PBXGroup;
 			children = (
 				73F2F31C5236FA0C25E5A2C4 /* CookieHelper.swift */,
+				A5F9FE2FCFC62FAB12444918 /* KeychainHelper.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -109,9 +170,15 @@
 		EE57497E7134409576670AE5 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				5F993CC85621130EA4B0E6E9 /* AboutView.swift */,
+				820BE85A0AA45F716D740F02 /* AddCourseView.swift */,
 				2A5209B647B49289C80BDFFF /* BatchSignView.swift */,
+				A45237AEB7561F97F73C02B8 /* EditCourseView.swift */,
+				AEC5128A4F26F2D100A7BBEB /* EditSessionView.swift */,
 				F624041DC5828033F0EBB8F4 /* LoginView.swift */,
+				3327EBC714B203EF57BFECB3 /* LoginViewModel.swift */,
 				082F809C0EC2E5DE2D73B434 /* MainView.swift */,
+				CCC84A3109F33065D8B44942 /* ManualAddView.swift */,
 				7F6778F75DB72559FA0B4D25 /* ScannerView.swift */,
 			);
 			path = Views;
@@ -120,6 +187,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		9E605E9E423646FF09487394 /* TongJiCanvasTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1937D72E6DCF55954F0DA0EA /* Build configuration list for PBXNativeTarget "TongJiCanvasTests" */;
+			buildPhases = (
+				6D9A03C100EFC895947AA3DC /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				89E24F45EEFC1115C057738D /* PBXTargetDependency */,
+			);
+			name = TongJiCanvasTests;
+			packageProductDependencies = (
+			);
+			productName = TongJiCanvasTests;
+			productReference = 8E99D6C97C21C7AE2F187294 /* TongJiCanvasTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		B884004DBCA07EC1F89DAA83 /* TongJiCanvas */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 116955FDB7272CD36D800C9A /* Build configuration list for PBXNativeTarget "TongJiCanvas" */;
@@ -147,6 +232,12 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					9E605E9E423646FF09487394 = {
+						ProvisioningStyle = Automatic;
+					};
+					B884004DBCA07EC1F89DAA83 = {
+						ProvisioningStyle = Automatic;
+					};
 				};
 			};
 			buildConfigurationList = 235C69F1C04E8AF7F9BA1B0F /* Build configuration list for PBXProject "TongJiCanvas" */;
@@ -164,6 +255,7 @@
 			projectRoot = "";
 			targets = (
 				B884004DBCA07EC1F89DAA83 /* TongJiCanvas */,
+				9E605E9E423646FF09487394 /* TongJiCanvasTests */,
 			);
 		};
 /* End PBXProject section */
@@ -184,11 +276,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8D63A739277AA967C53D77B7 /* AboutView.swift in Sources */,
+				AA192A00FC0DCFB84D28112C /* AddCourseView.swift in Sources */,
 				62A9952BA4047AD8AEDDB9BB /* BatchSignView.swift in Sources */,
+				AB93CF1E046B8B3F405E2C9A /* Color+Hex.swift in Sources */,
 				251796CB0F5A03789B343186 /* CookieHelper.swift in Sources */,
 				685648B77C25E67FEA47C68D /* Course.swift in Sources */,
+				646A8530F9EBAAF2114CCB4B /* EditCourseView.swift in Sources */,
+				6003D5BB924CCC84B067D77E /* EditSessionView.swift in Sources */,
+				7DC369CF2957DAED78EFBD5F /* KeychainHelper.swift in Sources */,
 				2E230D72A97DCED321038CD2 /* LoginView.swift in Sources */,
+				4C1A4AFB3A0D6767A0526681 /* LoginViewModel.swift in Sources */,
 				3DB54659C1A4114E78D384E7 /* MainView.swift in Sources */,
+				2A785B1A036C0A9E5667D0D9 /* ManualAddView.swift in Sources */,
 				A969FB44A0486F484E5B698B /* ScannerView.swift in Sources */,
 				6DE2E17895143041AB65A0DB /* SessionCard.swift in Sources */,
 				884F92942E6983B7D51AD4E4 /* SessionRepository.swift in Sources */,
@@ -198,7 +298,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6D9A03C100EFC895947AA3DC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3EF6B40427EC3A844D0EDB7A /* BatchSignViewModelTests.swift in Sources */,
+				8FE4547CAED2602FCE274A09 /* CookieHelperTests.swift in Sources */,
+				727E50D7D0180DCBE6BB0316 /* KeychainHelperTests.swift in Sources */,
+				E363F0A0CF66B6E364D74033 /* SessionRepositoryTests.swift in Sources */,
+				C76B9E4BC5681074D555B13C /* UserSessionTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		89E24F45EEFC1115C057738D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B884004DBCA07EC1F89DAA83 /* TongJiCanvas */;
+			targetProxy = A8DE507A243F9A0591DF5F64 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		20996BF02E865304EA1E412C /* Debug */ = {
@@ -264,6 +384,27 @@
 			};
 			name = Debug;
 		};
+		32FC75018C41AAB4A9CBD500 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 4HJTS3G3T2;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mln.tongji-canvas-ios-tests";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TongJiCanvas.app/TongJiCanvas";
+			};
+			name = Release;
+		};
 		705E05307BEC0E62587D9FEE /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -320,13 +461,36 @@
 			};
 			name = Release;
 		};
+		C8AA5D9A754CC3981C288304 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 4HJTS3G3T2;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mln.tongji-canvas-ios-tests";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TongJiCanvas.app/TongJiCanvas";
+			};
+			name = Debug;
+		};
 		D9BDAD8331178BFC6828B573 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TongJiCanvas/TongJiCanvas.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4HJTS3G3T2;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = TongJiCanvas/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -348,8 +512,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TongJiCanvas/TongJiCanvas.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4HJTS3G3T2;
 				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_TESTABILITY = YES;
 				INFOPLIST_FILE = TongJiCanvas/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -372,6 +539,15 @@
 			buildConfigurations = (
 				E2EB40EF41C5D1D4FAFF2C86 /* Debug */,
 				D9BDAD8331178BFC6828B573 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		1937D72E6DCF55954F0DA0EA /* Build configuration list for PBXNativeTarget "TongJiCanvasTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C8AA5D9A754CC3981C288304 /* Debug */,
+				32FC75018C41AAB4A9CBD500 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
