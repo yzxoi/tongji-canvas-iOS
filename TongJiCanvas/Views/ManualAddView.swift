@@ -10,14 +10,14 @@ struct ManualAddView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("用户信息") {
-                    TextField("用户昵称", text: $displayName)
+                Section("Identity") {
+                    TextField("Display Name", text: $displayName)
                     TextEditor(text: $accessToken)
                         .frame(minHeight: 100)
                         .overlay(
                             Group {
                                 if accessToken.isEmpty {
-                                    Text("认证信息 (Cookies)")
+                                    Text("Credential (Cookie string)")
                                         .foregroundStyle(.tertiary)
                                         .padding(4)
                                         .allowsHitTesting(false)
@@ -26,12 +26,12 @@ struct ManualAddView: View {
                         )
                 }
             }
-            .navigationTitle("手动录入 Cookies")
+            .navigationTitle("Paste Credential")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button("取消") { dismiss() } }
+                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("添加") {
+                    Button("Add") {
                         guard !displayName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
                         repo.addOrUpdate(displayName: displayName, accessToken: accessToken.isEmpty ? nil : accessToken)
                         dismiss()

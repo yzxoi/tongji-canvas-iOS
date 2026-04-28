@@ -22,8 +22,6 @@ struct ScannerView: View {
         }
         .onAppear { vm.start() }
         .onDisappear { vm.stop() }
-        // Auto-trigger sign-in flow when a valid URL is detected; invalid QRs
-        // still surface the retry card so the user knows why nothing happened.
         .onChange(of: vm.detectedURL) { _, url in
             if let url { onDetected(url) }
         }
@@ -39,7 +37,7 @@ struct ScannerView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 44))
                             .foregroundStyle(.green)
-                        Text("识别成功")
+                        Text("Target Acquired")
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(.white)
                     }
@@ -48,17 +46,17 @@ struct ScannerView: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 44))
                             .foregroundStyle(.orange)
-                        Text("未识别到签到链接")
+                        Text("Invalid Target")
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(.white)
                     }
                 }
             } else {
                 VStack(spacing: 6) {
-                    Text("对准签到二维码")
+                    Text("Point at QR code")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(.white)
-                    Text("自动支持小尺寸、倾斜二维码")
+                    Text("Supports small or skewed codes")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.8))
                 }
@@ -74,7 +72,6 @@ struct ScannerView: View {
 
     private var bottomControls: some View {
         VStack(spacing: 12) {
-            // URL / raw text preview chip
             if let last = vm.lastResult {
                 Label(last, systemImage: "qrcode.viewfinder")
                     .lineLimit(1)
@@ -96,15 +93,12 @@ struct ScannerView: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: vm.isPaused)
     }
 
-    // MARK: - Detected card (only invalid QR; valid URLs auto-trigger)
-
     @ViewBuilder
     private var detectedCard: some View {
         if vm.detectedURL != nil {
-            // ── 有效签到链接 — 已自动触发,只显示过渡反馈 ────────────
             VStack(spacing: 12) {
                 ProgressView()
-                Text("正在跳转签到…")
+                Text("Proceeding to fan-out...")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -113,11 +107,10 @@ struct ScannerView: View {
             .background(.regularMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 24))
         } else {
-            // ── 非签到 QR 码 ──────────────────────────────────
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                    Text("非签到二维码，请重试").font(.subheadline.weight(.semibold))
+                    Text("Not a valid target URL").font(.subheadline.weight(.semibold))
                     Spacer()
                 }
 
@@ -131,7 +124,7 @@ struct ScannerView: View {
                 Button {
                     vm.resume()
                 } label: {
-                    Label("重新扫描", systemImage: "arrow.counterclockwise")
+                    Label("Scan Again", systemImage: "arrow.counterclockwise")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -142,16 +135,14 @@ struct ScannerView: View {
         }
     }
 
-    // MARK: - Scanning card
-
     private var scanningCard: some View {
         VStack(spacing: 12) {
-            Text("将二维码置于取景框中").font(.body)
+            Text("Place QR code in viewfinder").font(.body)
             Button {
                 vm.toggleTorch()
             } label: {
                 Label(
-                    vm.torchOn ? "关闭手电" : "开启手电",
+                    vm.torchOn ? "Torch Off" : "Torch On",
                     systemImage: vm.torchOn ? "flashlight.off.fill" : "flashlight.on.fill"
                 )
                 .frame(maxWidth: .infinity)
@@ -162,8 +153,6 @@ struct ScannerView: View {
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 24))
     }
-
-    // MARK: - Close
 
     private var closeButton: some View {
         Button { dismiss() } label: {
@@ -181,7 +170,6 @@ struct ScannerView: View {
 
 @MainActor
 final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutputObjectsDelegate {
-    // nonisolated(unsafe): AVCaptureSession must be called on a background queue
     nonisolated(unsafe) let captureSession = AVCaptureSession()
 
     @Published var isPaused    = false
@@ -237,7 +225,6 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
         device.unlockForConfiguration()
     }
 
-    // AVCaptureMetadataOutputObjectsDelegate
     nonisolated func metadataOutput(_ output: AVCaptureMetadataOutput,
                                      didOutput objects: [AVMetadataObject],
                                      from connection: AVCaptureConnection) {
@@ -251,7 +238,6 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
             self.lastResult = raw
             self.isPaused   = true
 
-            // 触觉反馈
             let isValidURL = URL(string: raw)?.scheme?.hasPrefix("http") == true
             let generator  = UINotificationFeedbackGenerator()
             generator.notificationOccurred(isValidURL ? .success : .warning)
@@ -297,12 +283,10 @@ struct ScannerOverlay: View {
                 ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black.opacity(0.4)))
 
                 let frame = scanFrame(in: size)
-                // Cut out
                 ctx.blendMode = .destinationOut
                 ctx.fill(Path(roundedRect: frame, cornerRadius: 28), with: .color(.white))
                 ctx.blendMode = .normal
 
-                // Frame border — green on success
                 let borderColor: Color = isSuccess ? .green.opacity(0.9) : .white.opacity(0.5)
                 ctx.stroke(
                     Path(roundedRect: frame, cornerRadius: 28),
@@ -310,7 +294,6 @@ struct ScannerOverlay: View {
                     lineWidth: isSuccess ? 4 : 3
                 )
 
-                // Scan line (hidden when paused)
                 if !isPaused {
                     let lineY = frame.minY + frame.height * lineProgress
                     var line = Path()

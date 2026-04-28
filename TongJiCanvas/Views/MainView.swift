@@ -6,9 +6,9 @@ enum ColorSchemeMode: Int {
     case system = 0, light, dark
     var label: String {
         switch self {
-        case .system: "跟随系统"
-        case .light:  "浅色模式"
-        case .dark:   "深色模式"
+        case .system: "System"
+        case .light:  "Light"
+        case .dark:   "Dark"
         }
     }
     var icon: String {
@@ -31,22 +31,22 @@ struct MainView: View {
     @State private var showScanner         = false
     @State private var attendanceURL: AttendanceLink? = nil
 
-    // Course state
+    // Group state
     @State private var allUsersExpanded = true
-    @State private var showAddCourse    = false
+    @State private var showAddGroup     = false
     @State private var showAbout        = false
 
     // Edit
     @State private var editingSession: UserSession? = nil
-    @State private var editingCourse:  Course?      = nil
+    @State private var editingGroup:   Course?      = nil
 
-    // Snackbar
+    // Toast
     @State private var toastMessage: String? = nil
 
     var body: some View {
         NavigationStack {
             listContent
-                .navigationTitle("批量签到")
+                .navigationTitle("Session Mux")
                 .toolbar { toolbarItems }
                 .safeAreaInset(edge: .bottom) {
                     floatingDock
@@ -71,10 +71,10 @@ struct MainView: View {
         .sheet(item: $editingSession) { s in
             EditSessionView(session: s)
         }
-        .sheet(item: $editingCourse) { c in
-            EditCourseView(course: c)
+        .sheet(item: $editingGroup) { g in
+            EditCourseView(course: g)
         }
-        .sheet(isPresented: $showAddCourse) {
+        .sheet(isPresented: $showAddGroup) {
             AddCourseView()
         }
         .sheet(isPresented: $showAbout) {
@@ -112,7 +112,7 @@ struct MainView: View {
                 }
             } header: {
                 groupHeader(
-                    title: "全部人员", count: repo.sessions.count,
+                    title: "Identities", count: repo.sessions.count,
                     icon: "person.2", color: Color(hex: 0x7C3AED),
                     expanded: allUsersExpanded
                 ) { allUsersExpanded.toggle() }
@@ -126,7 +126,7 @@ struct MainView: View {
                         course: course,
                         memberCount: members.count,
                         allSelected: members.allSatisfy { selectedIds.contains($0.id) },
-                        onTap: { editingCourse = course },
+                        onTap: { editingGroup = course },
                         onToggleAll: {
                             let all = members.allSatisfy { selectedIds.contains($0.id) }
                             if all { members.forEach { selectedIds.remove($0.id) } }
@@ -138,9 +138,9 @@ struct MainView: View {
 
             Section {
                 Button {
-                    showAddCourse = true
+                    showAddGroup = true
                 } label: {
-                    Label("新建课程分组", systemImage: "folder.badge.plus")
+                    Label("New Group", systemImage: "folder.badge.plus")
                         .frame(maxWidth: .infinity)
                         .foregroundStyle(Color(hex: 0x7C3AED))
                 }
@@ -182,7 +182,7 @@ struct MainView: View {
             Button {
                 showAddSheet = true
             } label: {
-                Label("添加账号", systemImage: "plus")
+                Label("Add Identity", systemImage: "plus")
                     .font(.subheadline.weight(.medium))
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
@@ -192,20 +192,20 @@ struct MainView: View {
             }
             .buttonStyle(.plain)
 
-            let canSign = !selectedIds.isEmpty
+            let canFanOut = !selectedIds.isEmpty
             Button {
-                guard canSign else { return }
+                guard canFanOut else { return }
                 showScanner = true
             } label: {
                 Label(
-                    selectedIds.isEmpty ? "一键签到" : "签到（\(selectedIds.count)）",
-                    systemImage: "qrcode.viewfinder"
+                    selectedIds.isEmpty ? "Fan-out" : "Fan-out (\(selectedIds.count))",
+                    systemImage: "point.3.connected.trianglepath.dotted"
                 )
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .frame(height: 48)
                 .background(
-                    canSign
+                    canFanOut
                     ? LinearGradient(
                         colors: [Color(hex: 0x7C3AED), Color(hex: 0x9333EA)],
                         startPoint: .leading, endPoint: .trailing
@@ -216,17 +216,17 @@ struct MainView: View {
                     )
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 16))
-                .foregroundStyle(canSign ? .white : Color(.secondaryLabel))
+                .foregroundStyle(canFanOut ? .white : Color(.secondaryLabel))
             }
-            .disabled(!canSign)
+            .disabled(!canFanOut)
             .buttonStyle(.plain)
         }
         .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
-        .confirmationDialog("添加账号", isPresented: $showAddSheet) {
-            Button("在线登录添加（自动捕获 Cookies）") { showOAuthLogin = true }
-            Button("手动录入 Cookies") { showManualAdd = true }
-            Button("取消", role: .cancel) {}
+        .confirmationDialog("Add Identity", isPresented: $showAddSheet) {
+            Button("Sign in via IAM (auto-capture)") { showOAuthLogin = true }
+            Button("Paste Credential") { showManualAdd = true }
+            Button("Cancel", role: .cancel) {}
         }
     }
 
@@ -256,18 +256,18 @@ struct MainView: View {
                     }
                 } label: {
                     let current = ColorSchemeMode(rawValue: schemeMode) ?? .system
-                    Label("外观: \(current.label)", systemImage: current.icon)
+                    Label("Theme: \(current.label)", systemImage: current.icon)
                 }
                 Divider()
                 Button { showAbout = true } label: {
-                    Label("关于", systemImage: "info.circle")
+                    Label("About", systemImage: "info.circle")
                 }
                 Divider()
                 Button(action: importFromClipboard) {
-                    Label("从剪贴板导入", systemImage: "doc.on.clipboard")
+                    Label("Import from Clipboard", systemImage: "doc.on.clipboard")
                 }
                 Button(action: exportToClipboard) {
-                    Label("导出到剪贴板", systemImage: "square.and.arrow.up")
+                    Label("Export to Clipboard", systemImage: "square.and.arrow.up")
                 }
             } label: {
                 Image(systemName: "ellipsis.circle")
@@ -279,19 +279,19 @@ struct MainView: View {
 
     private func importFromClipboard() {
         guard let text = UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !text.isEmpty else { showToast("剪贴板为空"); return }
+              !text.isEmpty else { showToast("Clipboard is empty"); return }
         do {
             let (u, c) = try repo.importJSON(text)
-            showToast("已导入 \(u) 个账号" + (c > 0 ? "、\(c) 个课程" : ""))
+            showToast("Imported \(u) identities" + (c > 0 ? ", \(c) groups" : ""))
         } catch {
-            showToast("剪贴板内容格式有误")
+            showToast("Invalid clipboard format")
         }
     }
 
     private func exportToClipboard() {
-        guard !repo.sessions.isEmpty else { showToast("暂无可导出的账号"); return }
+        guard !repo.sessions.isEmpty else { showToast("No identities to export"); return }
         UIPasteboard.general.string = repo.exportJSON()
-        showToast("已导出 \(repo.sessions.count) 个账号")
+        showToast("Exported \(repo.sessions.count) identities")
     }
 
     // MARK: - Toast
@@ -301,10 +301,11 @@ struct MainView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { toastMessage = nil }
     }
 
+    @ViewBuilder
     private var toastOverlay: some View {
-        VStack {
-            Spacer()
-            if let msg = toastMessage {
+        if let msg = toastMessage {
+            VStack {
+                Spacer()
                 Text(msg)
                     .font(.subheadline)
                     .padding(.horizontal, 20).padding(.vertical, 12)
@@ -314,8 +315,8 @@ struct MainView: View {
                     .padding(.bottom, 120)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+            .animation(.spring(), value: toastMessage)
         }
-        .animation(.spring(), value: toastMessage)
     }
 }
 

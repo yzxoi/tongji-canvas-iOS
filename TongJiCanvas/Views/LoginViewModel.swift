@@ -7,7 +7,7 @@ final class LoginViewModel: NSObject, ObservableObject {
     @Published var loginDetected = false
     @Published var countdown     = 0
     @Published var isMobileUA    = true
-    @Published var statusMessage = "请在下方统一认证页面完成登录，系统会自动捕获 Cookies。"
+    @Published var statusMessage = "Complete IAM authentication below. Cookies will be captured automatically."
 
     let loginURL = URL(string: "https://canvas.tongji.edu.cn/lms/mobile/forscan?courseCode=2333&rollCallToken=2333")!
 
@@ -82,11 +82,11 @@ final class LoginViewModel: NSObject, ObservableObject {
             for i in stride(from: 5, through: 1, by: -1) {
                 guard !Task.isCancelled else { return }
                 countdown = i
-                statusMessage = "登录成功！系统将在 \(i) 秒后自动提取认证信息。"
+                statusMessage = "Authentication detected. Capturing credential in \(i)s..."
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
             countdown = 0
-            statusMessage = "正在提取认证信息..."
+            statusMessage = "Extracting credential..."
             await extractAndSave()
         }
     }
@@ -97,12 +97,12 @@ final class LoginViewModel: NSObject, ObservableObject {
             from: wv.configuration.websiteDataStore.httpCookieStore
         )
         guard !cookieString.isEmpty else {
-            statusMessage = "未找到认证信息，请重试。"
+            statusMessage = "No credential found. Please try again."
             loginDetected = false
             hasVisitedNonCanvas = false
             return
         }
-        let displayName = "用户\(Int(Date().timeIntervalSince1970))"
+        let displayName = "id_\(Int(Date().timeIntervalSince1970))"
         repo.addOrUpdate(displayName: displayName, accessToken: cookieString)
         onSaved()
     }

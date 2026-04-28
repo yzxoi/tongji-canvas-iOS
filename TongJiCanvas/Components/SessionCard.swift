@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - Avatar colour palette (mirrors Android)
+// MARK: - Avatar colour palette
 
 private let avatarStyles: [(bg: Color, fg: Color)] = [
     (Color(hex: 0xE6DEFF), Color(hex: 0x6A49FF)),
@@ -46,7 +46,7 @@ struct SessionCard: View {
         .onTapGesture { onEdit() }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive, action: onDelete) {
-                Label("删除", systemImage: "trash")
+                Label("Delete", systemImage: "trash")
             }
         }
     }
@@ -66,7 +66,7 @@ struct SessionCard: View {
             if !session.hasCredentials {
                 Circle().fill(Color.orange).frame(width: 6, height: 6)
             }
-            Text(session.hasCredentials ? "已保存认证信息" : "等待手动验证")
+            Text(session.hasCredentials ? "Credential stored" : "Awaiting credential")
                 .font(.caption)
                 .foregroundStyle(session.hasCredentials ? Color(.secondaryLabel) : .orange)
         }

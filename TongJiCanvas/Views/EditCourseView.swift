@@ -17,8 +17,8 @@ struct EditCourseView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section { TextField("课程名称", text: $courseName) }
-                Section("成员") {
+                Section { TextField("Group Name", text: $courseName) }
+                Section("Members") {
                     ForEach(repo.sessions) { s in
                         Toggle(s.displayName, isOn: Binding(
                             get: { memberIds.contains(s.id) },
@@ -27,18 +27,18 @@ struct EditCourseView: View {
                     }
                 }
                 Section {
-                    Button("删除课程", role: .destructive) {
+                    Button("Delete Group", role: .destructive) {
                         repo.remove(courseId: course.id)
                         dismiss()
                     }
                 }
             }
-            .navigationTitle("编辑课程")
+            .navigationTitle("Edit Group")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button("取消") { dismiss() } }
+                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("保存") {
+                    Button("Save") {
                         var updated = course
                         updated.name = courseName
                         updated.memberIds = Array(memberIds)

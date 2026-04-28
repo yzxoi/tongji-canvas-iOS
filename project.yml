@@ -28,10 +28,10 @@ targets:
     info:
       path: TongJiCanvas/Info.plist
       properties:
-        CFBundleName: Canvas签到
-        CFBundleDisplayName: Canvas签到
-        NSCameraUsageDescription: 相机权限用于扫描课堂签到二维码
-        NSPhotoLibraryUsageDescription: 访问相册
+        CFBundleName: CanvasSessionMux
+        CFBundleDisplayName: Session Mux
+        NSCameraUsageDescription: Camera is used to capture QR codes for HTTP request multiplexing experiments.
+        NSPhotoLibraryUsageDescription: Photo library access for importing QR code images.
         UILaunchScreen:
           UIColorName: ""
         UIApplicationSceneManifest:

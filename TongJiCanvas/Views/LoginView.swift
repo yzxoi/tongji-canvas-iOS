@@ -15,22 +15,22 @@ struct LoginView: View {
             VStack(spacing: 12) {
                 tipCard
 
-                Picker("模式", selection: Binding(get: { vm.isMobileUA }, set: { vm.switchUA(toMobile: $0) })) {
-                    Label("移动端", systemImage: "iphone").tag(true)
-                    Label("桌面端", systemImage: "desktopcomputer").tag(false)
+                Picker("Mode", selection: Binding(get: { vm.isMobileUA }, set: { vm.switchUA(toMobile: $0) })) {
+                    Label("Mobile", systemImage: "iphone").tag(true)
+                    Label("Desktop", systemImage: "desktopcomputer").tag(false)
                 }
                 .pickerStyle(.segmented)
 
                 HStack(spacing: 12) {
                     statusChip(
                         icon: "link",
-                        label: vm.currentURL.isEmpty ? "等待加载..." : "已加载"
+                        label: vm.currentURL.isEmpty ? "Loading..." : "Loaded"
                     )
                     statusChip(
                         icon: vm.loginDetected ? "checkmark.shield" : "clock",
                         label: vm.loginDetected
-                            ? (vm.countdown > 0 ? "倒计时 \(vm.countdown)s" : "已捕获")
-                            : "等待登录"
+                            ? (vm.countdown > 0 ? "Capture in \(vm.countdown)s" : "Captured")
+                            : "Awaiting login"
                     )
                 }
 
@@ -54,11 +54,11 @@ struct LoginView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 12)
             .padding(.top, 4)
-            .navigationTitle("统一认证登录")
+            .navigationTitle("IAM Authentication")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") { dismiss() }
+                    Button("Done") { dismiss() }
                 }
             }
         }
@@ -73,10 +73,10 @@ struct LoginView: View {
 
     private var tipCard: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("操作提示").font(.subheadline.weight(.semibold))
-            Text("1. 使用统一认证账号登录 Canvas，系统会自动捕获 Cookies。")
+            Text("Instructions").font(.subheadline.weight(.semibold))
+            Text("1. Sign in with your university IAM account. Cookies will be captured automatically.")
                 .font(.caption).foregroundStyle(.secondary)
-            Text("2. 若页面显示异常，可切换上方模式以匹配移动或桌面站点。")
+            Text("2. Switch between Mobile and Desktop mode if the page renders incorrectly.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -129,4 +129,3 @@ struct LoginWebViewWrapper: UIViewRepresentable {
         }
     }
 }
-

@@ -10,9 +10,9 @@ struct AddCourseView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section { TextField("课程名称", text: $courseName) }
+                Section { TextField("Group Name", text: $courseName) }
                 if !repo.sessions.isEmpty {
-                    Section("选择成员") {
+                    Section("Members") {
                         ForEach(repo.sessions) { s in
                             Toggle(s.displayName, isOn: Binding(
                                 get: { selectedMemberIds.contains(s.id) },
@@ -22,12 +22,12 @@ struct AddCourseView: View {
                     }
                 }
             }
-            .navigationTitle("新建课程分组")
+            .navigationTitle("New Group")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button("取消") { dismiss() } }
+                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("创建") {
+                    Button("Create") {
                         guard !courseName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
                         var c = repo.addCourse(name: courseName)
                         c.memberIds = Array(selectedMemberIds)

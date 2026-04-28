@@ -10,25 +10,18 @@ struct AboutView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // App icon + name
                     headerSection
-
-                    // Description
                     descriptionSection
-
-                    // Source code links
                     linksSection
-
-                    // Credits
                     creditsSection
                 }
                 .padding(20)
             }
-            .navigationTitle("关于")
+            .navigationTitle("About")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") { dismiss() }
+                    Button("Done") { dismiss() }
                 }
             }
         }
@@ -38,8 +31,8 @@ struct AboutView: View {
 
     private var headerSection: some View {
         VStack(spacing: 12) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 64))
+            Image(systemName: "point.3.connected.trianglepath.dotted")
+                .font(.system(size: 56))
                 .foregroundStyle(
                     LinearGradient(
                         colors: [Color(hex: 0x7C3AED), Color(hex: 0x9333EA)],
@@ -47,12 +40,16 @@ struct AboutView: View {
                     )
                 )
 
-            Text("Canvas 批量签到")
+            Text("Canvas Session Multiplexer")
                 .font(.title2.weight(.bold))
 
-            Text("v1.0")
+            Text("A Concurrent Per-User HTTP Proxy")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+
+            Text("v1.0 · Swift 6 · iOS 17+")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
         .padding(.top, 20)
     }
@@ -61,11 +58,17 @@ struct AboutView: View {
 
     private var descriptionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("项目简介")
+            Text("About")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text("同济大学 Canvas 系统课堂签到 iOS 原生客户端。支持多人并发批量签到、OAuth2 自动登录捕获 Cookie、课程分组管理、二维码扫描等功能。Cookie 长期有效，只需获取一次。")
+            Text("""
+            An experimental iOS client that explores per-user HTTP session isolation for concurrent multi-account attendance submission on Tongji University's Canvas LMS.
+
+            Instead of serialising requests through a shared Cookie store (the standard approach), this implementation injects credentials as explicit per-request Cookie headers over ephemeral URLSession instances — achieving true task-level parallelism under Swift 6 structured concurrency.
+
+            Built for research, testing, and educational purposes.
+            """)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .lineSpacing(4)
@@ -79,12 +82,12 @@ struct AboutView: View {
 
     private var linksSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("项目仓库")
+            Text("Repositories")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             linkRow(
-                title: "iOS 版",
+                title: "Session Multiplexer (iOS)",
                 description: "github.com/yzxoi/tongji-canvas-iOS",
                 url: "https://github.com/yzxoi/tongji-canvas-iOS",
                 icon: "apple.logo"
@@ -93,7 +96,7 @@ struct AboutView: View {
             Divider()
 
             linkRow(
-                title: "Android 版",
+                title: "TongJi Canvas (Android)",
                 description: "github.com/mmmlllnnn/TongJi_Canvas",
                 url: "https://github.com/mmmlllnnn/TongJi_Canvas",
                 icon: "gearshape.2"
@@ -102,7 +105,7 @@ struct AboutView: View {
             Divider()
 
             linkRow(
-                title: "Web 版",
+                title: "TongJi Canvas (Web)",
                 description: "github.com/mmmlllnnn/TongJi_Canvas_Web",
                 url: "https://github.com/mmmlllnnn/TongJi_Canvas_Web",
                 icon: "globe"
@@ -147,11 +150,15 @@ struct AboutView: View {
 
     private var creditsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("致谢")
+            Text("Acknowledgements")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text("感谢 Android 版和 Web 版的原作者 mmmlllnnn 提供的参考实现与思路。本 iOS 版在保持核心功能一致的基础上，针对 Apple 平台做了原生适配与优化。")
+            Text("""
+            The Android and Web reference implementations by mmmlllnnn provided the initial API analysis and problem framing. This iOS port investigates the same problem space under a different concurrency model — replacing sequential CookieManager mutation with per-request header injection.
+
+            All trademarks and service marks are property of their respective owners.
+            """)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .lineSpacing(4)

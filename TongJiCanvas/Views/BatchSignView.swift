@@ -2,16 +2,16 @@ import SwiftUI
 import WebKit
 import UIKit
 
-// MARK: - Signing state
+// MARK: - Request status
 
 enum SignStatus {
     case signing, success, failure, expired
     var label: String {
         switch self {
-        case .signing: "签到中"
-        case .success: "签到成功"
-        case .failure: "签到失败"
-        case .expired: "认证过期"
+        case .signing: "Pending"
+        case .success: "OK"
+        case .failure: "Failed"
+        case .expired: "Expired"
         }
     }
     var color: Color {
@@ -104,15 +104,14 @@ final class BatchSignViewModel: ObservableObject {
                 group.addTask { [weak self] in await self?.sign(session: session) }
             }
         }
-        // All tasks done — generate error summary if needed
         let failures = statuses.filter { $0.value == .failure || $0.value == .expired }
         if !failures.isEmpty {
             let expiredCount = failures.filter { $0.value == .expired }.count
             let failedCount = failures.count - expiredCount
             var parts: [String] = []
-            if failedCount > 0 { parts.append("\(failedCount) 个签到失败") }
-            if expiredCount > 0 { parts.append("\(expiredCount) 个认证过期，需要重新登录") }
-            errorSummary = parts.joined(separator: "，")
+            if failedCount > 0 { parts.append("\(failedCount) failed") }
+            if expiredCount > 0 { parts.append("\(expiredCount) expired, re-authentication required") }
+            errorSummary = parts.joined(separator: ", ")
         }
         allComplete = true
     }
@@ -127,7 +126,6 @@ final class BatchSignViewModel: ObservableObject {
             cookieValue: cookieValue
         )
 
-        // Haptic feedback
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(result.status == .success ? .success : .error)
 
@@ -135,8 +133,6 @@ final class BatchSignViewModel: ObservableObject {
         statuses[session.id] = result.status
     }
 
-    /// Non-isolated network call — runs on cooperative thread pool, not main actor.
-    /// All parameters are value types so no @MainActor crossing needed.
     private nonisolated static func performSign(
         url: URL,
         cookieValue: String
@@ -150,15 +146,13 @@ final class BatchSignViewModel: ObservableObject {
             request.setValue(cookieValue, forHTTPHeaderField: "Cookie")
         }
 
-        // First attempt
         let firstResult = await executeRequest(request)
         switch firstResult {
         case .success(let html):
             return evaluate(html: html)
         case .failure(let error):
             if shouldRetry(error) {
-                // One automatic retry for transient errors
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s backoff
+                try? await Task.sleep(nanoseconds: 500_000_000)
                 let secondResult = await executeRequest(request)
                 switch secondResult {
                 case .success(let html):
@@ -189,7 +183,7 @@ final class BatchSignViewModel: ObservableObject {
     }
 
     private nonisolated static func evaluate(html: String) -> SignResult {
-        // Check for expired session (redirected to login)
+        // Detect session expiry (redirected to IAM login)
         let lowerHTML = html.lowercased()
         let isExpired = lowerHTML.contains("统一身份认证")
             || lowerHTML.contains("oauth2/authorize")
@@ -239,7 +233,7 @@ final class BatchSignViewModel: ObservableObject {
         <html><head><meta name="viewport" content="width=device-width, initial-scale=1">
         <style>body{font-family:-apple-system;color:#dc2626;padding:24px;background:#fff;line-height:1.5}h3{margin-top:0}</style>
         </head><body>
-        <h3>请求失败</h3>
+        <h3>Request Failed</h3>
         <p>\(error.localizedDescription)</p>
         </body></html>
         """
@@ -290,22 +284,22 @@ struct BatchSignView: View {
             }
             .padding(16)
         }
-        .navigationTitle("批量签到")
+        .navigationTitle("Multiplexer")
         .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(vm.hasActiveSigning)
         .interactiveDismissDisabled(vm.hasActiveSigning)
         .toolbar {
             if vm.hasActiveSigning {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("返回") { showBackConfirm = true }
+                    Button("Back") { showBackConfirm = true }
                 }
             }
         }
-        .alert("签到仍在进行中", isPresented: $showBackConfirm) {
-            Button("继续等待", role: .cancel) {}
-            Button("放弃并返回", role: .destructive) { dismiss() }
+        .alert("Requests in Flight", isPresented: $showBackConfirm) {
+            Button("Wait", role: .cancel) {}
+            Button("Abort", role: .destructive) { dismiss() }
         } message: {
-            Text("还有 \(vm.statuses.values.filter { $0 == .signing }.count) 个账号正在签到，返回将丢失当前进度。")
+            Text("\(vm.statuses.values.filter { $0 == .signing }.count) request(s) still pending. Leaving will discard in-flight state.")
         }
         .onAppear { vm.start(sessions: selectedSessions) }
     }
@@ -314,16 +308,16 @@ struct BatchSignView: View {
 
     private var summaryCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("签到进度").font(.headline)
+            Text("Fan-out Progress").font(.headline)
 
             ProgressView(value: vm.progress)
                 .tint(vm.progress >= 1.0 ? .green : Color(hex: 0x7C3AED))
 
             HStack(spacing: 20) {
-                Text("总计 \(selectedSessions.count)").font(.subheadline)
-                Text("成功 \(vm.successCount)").font(.subheadline).foregroundStyle(.green)
+                Text("Total \(selectedSessions.count)").font(.subheadline)
+                Text("OK \(vm.successCount)").font(.subheadline).foregroundStyle(.green)
                 if vm.failureCount > 0 {
-                    Text("失败 \(vm.failureCount)").font(.subheadline).foregroundStyle(.red)
+                    Text("Fail \(vm.failureCount)").font(.subheadline).foregroundStyle(.red)
                 }
             }
 
@@ -352,7 +346,7 @@ struct BatchSignView: View {
         .transition(.move(edge: .top).combined(with: .opacity))
     }
 
-    // MARK: - Per-user card
+    // MARK: - Per-identity card
 
     @ViewBuilder
     private func sessionCard(_ session: UserSession) -> some View {
@@ -364,7 +358,7 @@ struct BatchSignView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(session.displayName).font(.headline)
-                    Text(session.hasCredentials ? "已保存认证信息" : "未保存认证信息")
+                    Text(session.hasCredentials ? "Credential stored" : "No credential")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -378,7 +372,7 @@ struct BatchSignView: View {
             HStack(spacing: 12) {
                 if hasResult {
                     Button { vm.toggleExpanded(session.id) } label: {
-                        Label(expanded ? "收起" : "查看响应",
+                        Label(expanded ? "Collapse" : "Inspect",
                               systemImage: expanded ? "chevron.up" : "eye")
                             .frame(maxWidth: .infinity)
                     }
@@ -387,7 +381,7 @@ struct BatchSignView: View {
 
                 if status == .failure || status == .expired {
                     Button { vm.retry(session: session) } label: {
-                        Label("重试", systemImage: "arrow.clockwise").frame(maxWidth: .infinity)
+                        Label("Retry", systemImage: "arrow.clockwise").frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                 }
@@ -403,7 +397,7 @@ struct BatchSignView: View {
                         .fill(Color(.tertiarySystemBackground))
                     VStack(spacing: 8) {
                         ProgressView()
-                        Text(status == .signing ? "签到进行中..." : "加载中...")
+                        Text(status == .signing ? "Request in flight..." : "Loading...")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -427,7 +421,7 @@ struct BatchSignView: View {
     }
 }
 
-// MARK: - Result WebView (renders Canvas response HTML with full CSS/iframe support)
+// MARK: - Result WebView
 
 private struct ResultWebView: UIViewRepresentable {
     let html: String

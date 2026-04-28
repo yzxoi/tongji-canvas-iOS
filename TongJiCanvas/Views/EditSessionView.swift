@@ -7,40 +7,40 @@ struct EditSessionView: View {
     let session: UserSession
     @State private var displayName: String
     @State private var accessToken: String
-    @State private var selectedCourseIds: Set<UUID>
+    @State private var selectedGroupIds: Set<UUID>
 
     init(session: UserSession) {
         self.session = session
         _displayName = State(initialValue: session.displayName)
         _accessToken = State(initialValue: session.accessToken ?? "")
-        _selectedCourseIds = State(initialValue: [])
+        _selectedGroupIds = State(initialValue: [])
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("用户信息") {
-                    TextField("用户昵称", text: $displayName)
+                Section("Identity") {
+                    TextField("Display Name", text: $displayName)
                     TextEditor(text: $accessToken)
                         .frame(minHeight: 100)
                 }
                 if !repo.courses.isEmpty {
-                    Section("所属课程") {
+                    Section("Groups") {
                         ForEach(repo.courses) { course in
                             Toggle(course.name, isOn: Binding(
-                                get: { selectedCourseIds.contains(course.id) },
-                                set: { if $0 { selectedCourseIds.insert(course.id) } else { selectedCourseIds.remove(course.id) } }
+                                get: { selectedGroupIds.contains(course.id) },
+                                set: { if $0 { selectedGroupIds.insert(course.id) } else { selectedGroupIds.remove(course.id) } }
                             ))
                         }
                     }
                 }
             }
-            .navigationTitle("编辑用户")
+            .navigationTitle("Edit Identity")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button("取消") { dismiss() } }
+                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("保存") {
+                    Button("Save") {
                         var updated = session
                         updated.displayName = displayName
                         updated.accessToken = accessToken.isEmpty ? nil : accessToken
@@ -48,7 +48,7 @@ struct EditSessionView: View {
                         for i in repo.courses.indices {
                             let cid = repo.courses[i].id
                             var course = repo.courses[i]
-                            if selectedCourseIds.contains(cid) {
+                            if selectedGroupIds.contains(cid) {
                                 if !course.memberIds.contains(session.id) { course.memberIds.append(session.id) }
                             } else {
                                 course.memberIds.removeAll { $0 == session.id }
@@ -60,7 +60,7 @@ struct EditSessionView: View {
                 }
             }
             .onAppear {
-                selectedCourseIds = Set(repo.courses.filter { $0.memberIds.contains(session.id) }.map(\.id))
+                selectedGroupIds = Set(repo.courses.filter { $0.memberIds.contains(session.id) }.map(\.id))
             }
         }
     }
