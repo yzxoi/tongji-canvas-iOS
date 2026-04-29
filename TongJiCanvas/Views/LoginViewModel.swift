@@ -79,7 +79,7 @@ final class LoginViewModel: NSObject, ObservableObject {
     private func startCountdown() {
         statusMessage = ""
         countdownTask = Task { @MainActor in
-            for i in stride(from: 5, through: 1, by: -1) {
+            for i in stride(from: 1, through: 1, by: -1) {
                 guard !Task.isCancelled else { return }
                 countdown = i
                 statusMessage = "Authentication detected. Capturing credential in \(i)s..."
@@ -102,8 +102,41 @@ final class LoginViewModel: NSObject, ObservableObject {
             hasVisitedNonCanvas = false
             return
         }
-        let displayName = "id_\(Int(Date().timeIntervalSince1970))"
+        let displayName = await extractUserInfo(from: wv)
         repo.addOrUpdate(displayName: displayName, accessToken: cookieString)
         onSaved()
+    }
+
+    /// Extract student name and ID from the loaded response HTML.
+    /// Falls back to a timestamp-based ID if parsing fails.
+    private func extractUserInfo(from wv: WKWebView) async -> String {
+        let js = """
+        (function() {
+            const content = document.querySelector('.content.nomsg');
+            if (!content) return null;
+            const divs = content.querySelectorAll('div');
+            var sid = '', name = '';
+            divs.forEach(function(div) {
+                var text = div.textContent.trim();
+                if (text.indexOf('学号/工号：') === 0) sid = text.split('：')[1].trim();
+                if (text.indexOf('签到人员：') === 0) name = text.split('：')[1].trim();
+            });
+            if (!name && !sid) return null;
+            return JSON.stringify({sid: sid, name: name});
+        })()
+        """
+        do {
+            let result = try await wv.evaluateJavaScript(js)
+            guard let json = result as? String,
+                  let data = json.data(using: .utf8),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: String]
+            else { return "id_\(Int(Date().timeIntervalSince1970))" }
+            var parts: [String] = []
+            if let name = obj["name"], !name.isEmpty { parts.append(name) }
+            if let sid = obj["sid"], !sid.isEmpty { parts.append(sid) }
+            return parts.isEmpty ? "id_\(Int(Date().timeIntervalSince1970))" : parts.joined(separator: "_")
+        } catch {
+            return "id_\(Int(Date().timeIntervalSince1970))"
+        }
     }
 }

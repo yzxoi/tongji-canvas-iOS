@@ -81,10 +81,10 @@ struct BatchSignViewModelTests {
     // MARK: - SignStatus labels & icons
 
     @Test func signStatusLabels() {
-        #expect(SignStatus.signing.label == "签到中")
-        #expect(SignStatus.success.label == "签到成功")
-        #expect(SignStatus.failure.label == "签到失败")
-        #expect(SignStatus.expired.label == "认证过期")
+        #expect(SignStatus.signing.label == "Pending")
+        #expect(SignStatus.success.label == "OK")
+        #expect(SignStatus.failure.label == "Failed")
+        #expect(SignStatus.expired.label == "Expired")
     }
 
     @Test func signStatusIcons() {

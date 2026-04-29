@@ -42,6 +42,7 @@ struct MainView: View {
 
     // Toast
     @State private var toastMessage: String? = nil
+    @State private var toastTask: Task<Void, Never>? = nil
 
     var body: some View {
         NavigationStack {
@@ -297,15 +298,21 @@ struct MainView: View {
     // MARK: - Toast
 
     private func showToast(_ msg: String) {
+        toastTask?.cancel()
         toastMessage = msg
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { toastMessage = nil }
+        toastTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            toastMessage = nil
+        }
     }
 
     @ViewBuilder
     private var toastOverlay: some View {
-        if let msg = toastMessage {
-            VStack {
-                Spacer()
+        // The ZStack is always present so the dismiss transition can animate out.
+        ZStack(alignment: .bottom) {
+            Color.clear
+            if let msg = toastMessage {
                 Text(msg)
                     .font(.subheadline)
                     .padding(.horizontal, 20).padding(.vertical, 12)
@@ -315,8 +322,8 @@ struct MainView: View {
                     .padding(.bottom, 120)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .animation(.spring(), value: toastMessage)
         }
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: toastMessage)
     }
 }
 
