@@ -126,12 +126,15 @@ struct MainView: View {
                     CourseGroupHeader(
                         course: course,
                         memberCount: members.count,
-                        allSelected: members.allSatisfy { selectedIds.contains($0.id) },
+                        allSelected: {
+                            let memberIds = Set(members.map(\.id))
+                            return !memberIds.isEmpty && selectedIds == memberIds
+                        }(),
                         onTap: { editingGroup = course },
                         onToggleAll: {
-                            let all = members.allSatisfy { selectedIds.contains($0.id) }
-                            if all { members.forEach { selectedIds.remove($0.id) } }
-                            else   { members.forEach { selectedIds.insert($0.id) } }
+                            let memberIds = Set(members.map(\.id))
+                            if memberIds.isEmpty { return }
+                            selectedIds = (selectedIds == memberIds) ? [] : memberIds
                         }
                     )
                 }
