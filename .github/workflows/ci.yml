@@ -41,22 +41,15 @@ jobs:
           # Resolve the UDID of the first available iPhone iOS simulator.
           # xcrun simctl reads the CoreSimulator DB directly; passing id=<UDID>
           # to xcodebuild bypasses its fragile name/OS-version matching.
-          SIM_ID=$(xcrun simctl list devices available -j | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-# Iterate runtimes in descending order (prefer latest iOS version)
-for rt in sorted(data['devices'].keys(), reverse=True):
-    if 'iOS' not in rt:
-        continue
-    for dev in data['devices'][rt]:
-        if 'iPhone' in dev.get('name', '') and dev.get('isAvailable', False):
-            print(dev['udid'])
-            sys.exit(0)
-" 2>/dev/null)
+          # grep -Eo avoids multi-line Python (-c) which breaks YAML indentation.
+          SIM_ID=$(xcrun simctl list devices available \
+            | grep "iPhone" \
+            | grep -Eo "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}" \
+            | head -1)
           if [ -n "$SIM_ID" ]; then
             DEST="id=$SIM_ID"
           else
-            echo "Warning: no concrete iPhone simulator found via simctl; falling back to name"
+            echo "Warning: no concrete iPhone simulator found; falling back to name"
             xcrun simctl list runtimes
             xcrun simctl list devices available | head -30
             DEST="platform=iOS Simulator,name=iPhone 16"
