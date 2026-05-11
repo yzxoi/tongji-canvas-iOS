@@ -8,10 +8,26 @@ struct ScannerView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var vm = ScannerViewModel()
 
+    /// Zoom level captured at the moment a pinch gesture begins.
+    @State private var pinchBaseZoom: CGFloat = 1.0
+    /// True while a pinch gesture is active — prevents auto-zoom from overwriting the base.
+    @State private var isPinching = false
+
     var body: some View {
         ZStack {
             CameraPreview(session: vm.captureSession)
                 .ignoresSafeArea()
+                .gesture(
+                    MagnificationGesture()
+                        .onChanged { scale in
+                            isPinching = true
+                            vm.setZoom(pinchBaseZoom * scale)
+                        }
+                        .onEnded { _ in
+                            pinchBaseZoom = vm.zoomFactor
+                            isPinching    = false
+                        }
+                )
 
             ScannerOverlay(isPaused: vm.isPaused, isSuccess: vm.detectedURL != nil)
                 .ignoresSafeArea()
@@ -24,6 +40,10 @@ struct ScannerView: View {
         .onDisappear { vm.stop() }
         .onChange(of: vm.detectedURL) { _, url in
             if let url { onDetected(url) }
+        }
+        // Keep pinchBaseZoom in sync with auto-zoom (only when not actively pinching)
+        .onChange(of: vm.zoomFactor) { _, newZoom in
+            if !isPinching { pinchBaseZoom = newZoom }
         }
     }
 
@@ -59,6 +79,16 @@ struct ScannerView: View {
                     Text("Supports small or skewed codes")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.8))
+                    // Zoom level badge — appears when auto-zoom or pinch is active
+                    if vm.isZoomed {
+                        Text(String(format: "%.1f×", vm.zoomFactor))
+                            .font(.caption.weight(.semibold))
+                            .monospacedDigit()
+                            .padding(.horizontal, 10).padding(.vertical, 4)
+                            .background(.black.opacity(0.55), in: Capsule())
+                            .foregroundStyle(.white)
+                            .transition(.opacity.combined(with: .scale(scale: 0.85)))
+                    }
                 }
             }
         }
@@ -66,6 +96,7 @@ struct ScannerView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: vm.isPaused)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: vm.detectedURL != nil)
+        .animation(.easeInOut(duration: 0.2), value: vm.isZoomed)
     }
 
     // MARK: - Bottom controls
@@ -123,6 +154,7 @@ struct ScannerView: View {
 
                 Button {
                     vm.resume()
+                    pinchBaseZoom = 1.0
                 } label: {
                     Label("Scan Again", systemImage: "arrow.counterclockwise")
                         .frame(maxWidth: .infinity)
@@ -138,16 +170,34 @@ struct ScannerView: View {
     private var scanningCard: some View {
         VStack(spacing: 12) {
             Text("Place QR code in viewfinder").font(.body)
-            Button {
-                vm.toggleTorch()
-            } label: {
-                Label(
-                    vm.torchOn ? "Torch Off" : "Torch On",
-                    systemImage: vm.torchOn ? "flashlight.off.fill" : "flashlight.on.fill"
-                )
-                .frame(maxWidth: .infinity)
+            HStack(spacing: 10) {
+                Button {
+                    vm.toggleTorch()
+                } label: {
+                    Label(
+                        vm.torchOn ? "Torch Off" : "Torch On",
+                        systemImage: vm.torchOn ? "flashlight.off.fill" : "flashlight.on.fill"
+                    )
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                // Reset-zoom button — visible whenever zoom is elevated above baseline
+                if vm.isZoomed {
+                    Button {
+                        vm.resetZoomManual()
+                        pinchBaseZoom = 1.0
+                    } label: {
+                        Label(String(format: "%.1f×", vm.zoomFactor),
+                              systemImage: "arrow.down.right.and.arrow.up.left")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.blue)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                }
             }
-            .buttonStyle(.bordered)
+            .animation(.easeInOut(duration: 0.2), value: vm.isZoomed)
         }
         .padding(20)
         .background(.regularMaterial)
@@ -171,24 +221,51 @@ struct ScannerView: View {
 @MainActor
 final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutputObjectsDelegate {
     nonisolated(unsafe) let captureSession = AVCaptureSession()
+    /// Retained to drive zoom after session start; nonisolated(unsafe) follows the same
+    /// pattern as captureSession — all AVFoundation calls are serialised via lockForConfiguration.
+    nonisolated(unsafe) var captureDevice: AVCaptureDevice?
 
     @Published var isPaused    = false
     @Published var torchOn     = false
     @Published var lastResult: String? = nil
     @Published var detectedURL: URL?   = nil
+    /// Current zoom factor — updated when auto-zoom or pinch fires.
+    @Published var zoomFactor: CGFloat = 1.0
+
+    /// True when zoom is meaningfully above the session-start baseline.
+    var isZoomed: Bool { zoomFactor > baseZoomFactor + 0.15 }
 
     private let queue = DispatchQueue(label: "scanner.queue")
+    /// Zoom set once at session start by setRecommendedZoomFactor — the floor for resets.
+    private var baseZoomFactor: CGFloat = 1.0
+    /// Cancellable task that resets zoom after 3 s of silence.
+    private var resetZoomTask: Task<Void, Never>?
+
+    // MARK: Session lifecycle
 
     func start() {
         queue.async { [captureSession] in
             captureSession.beginConfiguration()
 
-            guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-                  let input = try? AVCaptureDeviceInput(device: device),
+            // Prefer builtInDualCamera (iPhone 11+): supports optical zoom via
+            // virtualDeviceSwitchOverVideoZoomFactors — the system switches
+            // transparently between wide and telephoto lenses as videoZoomFactor rises.
+            let preferredType: AVCaptureDevice.DeviceType =
+                AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back) != nil
+                ? .builtInDualCamera
+                : .builtInWideAngleCamera
+
+            guard let device = AVCaptureDevice.default(preferredType, for: .video, position: .back),
+                  let input  = try? AVCaptureDeviceInput(device: device),
                   captureSession.canAddInput(input)
             else { captureSession.commitConfiguration(); return }
 
             captureSession.addInput(input)
+
+            // Static zoom — Apple AVCamBarcode technique (ported from CodeScanner, MIT).
+            // Compensates for the increased minimum focus distance on iPhone 14 Pro+.
+            device.setRecommendedZoomFactor(forMinimumCodeSize: 20)
+            let initialZoom = device.videoZoomFactor
 
             let output = AVCaptureMetadataOutput()
             if captureSession.canAddOutput(output) {
@@ -199,13 +276,24 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
 
             captureSession.commitConfiguration()
             captureSession.startRunning()
+
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.captureDevice  = device
+                self.baseZoomFactor = initialZoom
+                self.zoomFactor     = initialZoom
+            }
         }
     }
 
     func stop() {
+        resetZoomTask?.cancel()
+        captureDevice?.resetZoom(to: baseZoomFactor, rate: 4.0)
         queue.async { [captureSession] in captureSession.stopRunning() }
         setTorch(false)
     }
+
+    // MARK: Controls
 
     func toggleTorch() {
         torchOn.toggle()
@@ -216,14 +304,55 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
         isPaused    = false
         lastResult  = nil
         detectedURL = nil
+        resetZoomTask?.cancel()
+        // Brief delay so the overlay transition completes before zoom resets
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
+            self.captureDevice?.resetZoom(to: self.baseZoomFactor)
+            withAnimation(.easeOut(duration: 0.4)) { self.zoomFactor = self.baseZoomFactor }
+        }
+    }
+
+    /// Called by the pinch gesture — sets zoom immediately without animation.
+    func setZoom(_ factor: CGFloat) {
+        guard let device = captureDevice else { return }
+        // maxAvailableVideoZoomFactor is iOS-only; the macOS stub returns 1.0 (no-op).
+        let maxZoom = Swift.min(device.maxAvailableVideoZoomFactor, 6.0)
+        let clamped = Swift.min(Swift.max(factor, 1.0), maxZoom)
+        device.setZoomImmediate(clamped)
+        zoomFactor = clamped
+        scheduleZoomReset()
+    }
+
+    /// Smoothly returns to the session-start base zoom; called by the reset button.
+    func resetZoomManual() {
+        resetZoomTask?.cancel()
+        captureDevice?.resetZoom(to: baseZoomFactor)
+        withAnimation(.easeOut(duration: 0.35)) { zoomFactor = baseZoomFactor }
+    }
+
+    // MARK: Private
+
+    private func scheduleZoomReset() {
+        resetZoomTask?.cancel()
+        resetZoomTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            self.captureDevice?.resetZoom(to: self.baseZoomFactor)
+            withAnimation(.easeOut(duration: 0.5)) { self.zoomFactor = self.baseZoomFactor }
+        }
     }
 
     private func setTorch(_ on: Bool) {
-        guard let device = AVCaptureDevice.default(for: .video), device.hasTorch else { return }
+        // Use captureDevice (may be a virtual dual-camera) rather than the default device
+        let device = captureDevice ?? AVCaptureDevice.default(for: .video)
+        guard let device, device.hasTorch else { return }
         try? device.lockForConfiguration()
         device.torchMode = on ? .on : .off
         device.unlockForConfiguration()
     }
+
+    // MARK: AVCaptureMetadataOutputObjectsDelegate
 
     nonisolated func metadataOutput(_ output: AVCaptureMetadataOutput,
                                      didOutput objects: [AVMetadataObject],
@@ -232,19 +361,30 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
               let raw = obj.stringValue, !raw.isEmpty
         else { return }
 
+        // Dynamic zoom: fires before the result is processed so the next frame
+        // arrives at a more legible size if the QR was small.
+        // Runs on DispatchQueue.main (delegate queue set above) — lockForConfiguration
+        // is fast enough not to cause perceptible jank.
+        let qrWidth    = obj.bounds.width
+        let device     = captureDevice
+        var zoomedTo: CGFloat?
+        if let device, let target = device.targetZoom(forQRWidth: qrWidth) {
+            device.rampZoom(toFactor: target)
+            zoomedTo = target
+        }
+
         Task { @MainActor [weak self] in
             guard let self, !self.isPaused else { return }
+
+            if let z = zoomedTo { self.zoomFactor = z }
+            self.scheduleZoomReset()
 
             self.lastResult = raw
             self.isPaused   = true
 
             let isValidURL = URL(string: raw)?.scheme?.hasPrefix("http") == true
-            let generator  = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(isValidURL ? .success : .warning)
-
-            if isValidURL {
-                self.detectedURL = URL(string: raw)
-            }
+            UINotificationFeedbackGenerator().notificationOccurred(isValidURL ? .success : .warning)
+            if isValidURL { self.detectedURL = URL(string: raw) }
         }
     }
 }
