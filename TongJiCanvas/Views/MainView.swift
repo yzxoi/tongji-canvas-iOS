@@ -43,6 +43,8 @@ struct MainView: View {
     // Toast
     @State private var toastMessage: String? = nil
     @State private var toastTask: Task<Void, Never>? = nil
+    // Export
+    @State private var showExportSheet = false
 
     var body: some View {
         NavigationStack {
@@ -86,6 +88,16 @@ struct MainView: View {
                 showScanner = false
                 attendanceURL = AttendanceLink(url: url)
             }
+        }
+        .sheet(isPresented: $showExportSheet) {
+            ExportSheet(
+                count: selectedIds.intersection(Set(repo.sessions.map(\.id))).count,
+                onExport: { format in
+                    showExportSheet = false
+                    exportToClipboard(format: format, selectedIds: selectedIds)
+                }
+            )
+            .presentationDetents([.medium])
         }
         .overlay(toastOverlay)
     }
@@ -270,7 +282,9 @@ struct MainView: View {
                 Button(action: importFromClipboard) {
                     Label("Import from Clipboard", systemImage: "doc.on.clipboard")
                 }
-                Button(action: exportToClipboard) {
+                Button {
+                    showExportSheet = true
+                } label: {
                     Label("Export to Clipboard", systemImage: "square.and.arrow.up")
                 }
             } label: {
@@ -292,10 +306,18 @@ struct MainView: View {
         }
     }
 
-    private func exportToClipboard() {
-        guard !repo.sessions.isEmpty else { showToast("No identities to export"); return }
-        UIPasteboard.general.string = repo.exportJSON()
-        showToast("Exported \(repo.sessions.count) identities")
+    private func exportToClipboard(format: SessionRepository.ExportFormat, selectedIds: Set<UUID>) {
+        let count = selectedIds.intersection(Set(repo.sessions.map(\.id))).count
+        guard count > 0 else { showToast("No identities selected"); return }
+        let content = repo.exportJSON(format: format, selectedIds: selectedIds)
+        guard !content.isEmpty else { return }
+        UIPasteboard.general.string = content
+        switch format {
+        case .fullJSON:
+            showToast("Exported \(count) identities (full)")
+        case .rawCookies:
+            showToast("Exported \(count) cookies (raw)")
+        }
     }
 
     // MARK: - Toast
@@ -370,4 +392,83 @@ private struct CourseGroupHeader: View {
 struct AttendanceLink: Identifiable, Hashable {
     let id = UUID()
     let url: URL
+}
+
+// MARK: - Export Sheet
+
+struct ExportSheet: View {
+    let count: Int
+    let onExport: (SessionRepository.ExportFormat) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                Text("\(count) identit" + (count == 1 ? "y" : "ies") + " selected")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+
+                VStack(spacing: 12) {
+                    exportOption(
+                        format: .fullJSON,
+                        icon: "doc.richtext",
+                        title: "Full JSON",
+                        subtitle: "With display names & groups — works on both iOS & Android"
+                    )
+
+                    exportOption(
+                        format: .rawCookies,
+                        icon: "text.alignleft",
+                        title: "Raw Cookies",
+                        subtitle: "One cookie per line — for sharing credentials only"
+                    )
+                }
+                .padding(.horizontal, 20)
+
+                Spacer()
+            }
+            .padding(.top, 24)
+            .navigationTitle("Export to Clipboard")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func exportOption(format: SessionRepository.ExportFormat,
+                              icon: String, title: String, subtitle: String) -> some View {
+        Button {
+            onExport(format)
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .frame(width: 36)
+                    .foregroundStyle(Color(hex: 0xB8A2FF))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer()
+
+                Image(systemName: "arrow.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(14)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
 }

@@ -117,26 +117,68 @@ final class SessionRepository: ObservableObject {
 
     // MARK: - Import / Export
 
-    func exportJSON() -> String {
-        let users = sessions.map { s -> [String: Any] in
-            ["displayName": s.displayName,
-             "accessToken": s.accessToken ?? ""]
+    /// Export format variants.
+    enum ExportFormat {
+        /// Full JSON with users, courses, and displayNames. Compatible with both iOS and Android.
+        case fullJSON
+        /// One cookie per line, no JSON wrapper. For sharing raw credentials without metadata.
+        case rawCookies
+    }
+
+    func exportJSON(format: ExportFormat = .fullJSON, selectedIds: Set<UUID>? = nil) -> String {
+        let ids = selectedIds ?? Set(sessions.map(\.id))
+        let selected = sessions.filter { ids.contains($0.id) }
+
+        switch format {
+        case .fullJSON:
+            let users = selected.map { s -> [String: Any] in
+                ["displayName": s.displayName,
+                 "accessToken": s.accessToken ?? ""]
+            }
+            let courseList = courses.compactMap { c -> [String: Any]? in
+                let names = c.memberIds
+                    .filter { ids.contains($0) }
+                    .compactMap { id in sessions.first { $0.id == id }?.displayName }
+                guard !names.isEmpty else { return nil }
+                return ["name": c.name, "members": names]
+            }
+            var root: [String: Any] = ["users": users]
+            if !courseList.isEmpty { root["courses"] = courseList }
+            guard let data = try? JSONSerialization.data(withJSONObject: root, options: .prettyPrinted),
+                  let str = String(data: data, encoding: .utf8) else { return "" }
+            return str
+
+        case .rawCookies:
+            return selected.compactMap { s in
+                guard let token = s.accessToken, !token.isEmpty else { return nil }
+                return token
+            }.joined(separator: "\n")
         }
-        let courseList = courses.map { c -> [String: Any] in
-            let names = c.memberIds.compactMap { id in sessions.first { $0.id == id }?.displayName }
-            return ["name": c.name, "members": names]
-        }
-        var root: [String: Any] = ["users": users]
-        if !courseList.isEmpty { root["courses"] = courseList }
-        guard let data = try? JSONSerialization.data(withJSONObject: root, options: .prettyPrinted),
-              let str = String(data: data, encoding: .utf8) else { return "" }
-        return str
     }
 
     enum ImportError: Error { case invalidFormat }
 
+    /// Import from clipboard. Supports three formats:
+    /// 1. JSON object: `{"users": [...], "courses": [...]}`  (iOS & Android export)
+    /// 2. JSON array: `[{"displayName":"...","accessToken":"..."}]`
+    /// 3. Raw cookie lines: one `_canvas_middle_session=...` per line
     @discardableResult
-    func importJSON(_ json: String) throws -> (users: Int, courses: Int) {
+    func importJSON(_ text: String) throws -> (users: Int, courses: Int) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw ImportError.invalidFormat }
+
+        // Detect format by first non-whitespace character
+        let first = trimmed[trimmed.startIndex]
+        if first == "{" { return try importJSONObject(trimmed) }
+        if first == "[" { return try importJSONArray(trimmed) }
+
+        // Fallthrough: treat as raw cookie lines
+        return try importRawCookies(trimmed)
+    }
+
+    // MARK: Private import helpers
+
+    private func importJSONObject(_ json: String) throws -> (users: Int, courses: Int) {
         guard let data = json.data(using: .utf8),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { throw ImportError.invalidFormat }
@@ -174,5 +216,40 @@ final class SessionRepository: ObservableObject {
             }
         }
         return (importedUsers, importedCourses)
+    }
+
+    private func importJSONArray(_ json: String) throws -> (users: Int, courses: Int) {
+        guard let data = json.data(using: .utf8),
+              let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+        else { throw ImportError.invalidFormat }
+
+        var imported = 0
+        for obj in arr {
+            let name = ((obj["displayName"] ?? obj["name"]) as? String ?? "").trimmingCharacters(in: .whitespaces)
+            let token = ((obj["accessToken"] ?? obj["token"]) as? String ?? "").trimmingCharacters(in: .whitespaces)
+            guard !name.isEmpty else { continue }
+            addOrUpdate(displayName: name, accessToken: token.isEmpty ? nil : token)
+            imported += 1
+        }
+        return (imported, 0)
+    }
+
+    /// Import raw cookie lines. Each line is a standalone cookie string like
+    /// `_canvas_middle_session=...`.  Since no displayName is provided, one is
+    /// generated from a short hash of the cookie value.
+    private func importRawCookies(_ text: String) throws -> (users: Int, courses: Int) {
+        let lines = text.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && $0.contains("=") }
+
+        guard !lines.isEmpty else { throw ImportError.invalidFormat }
+
+        var imported = 0
+        for (i, cookie) in lines.enumerated() {
+            let displayName = "User \(i + 1)"
+            addOrUpdate(displayName: displayName, accessToken: cookie)
+            imported += 1
+        }
+        return (imported, 0)
     }
 }
