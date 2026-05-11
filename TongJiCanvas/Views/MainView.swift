@@ -413,7 +413,7 @@ struct ExportSheet: View {
                     exportOption(
                         format: .fullJSON,
                         icon: "doc.richtext",
-                        title: "Full JSON",
+                        title: "Full JSON (Recommended)",
                         subtitle: "With display names & groups — works on both iOS & Android"
                     )
 
