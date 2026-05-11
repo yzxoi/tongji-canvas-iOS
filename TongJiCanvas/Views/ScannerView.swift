@@ -262,10 +262,14 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
 
             captureSession.addInput(input)
 
-            // Static zoom — Apple AVCamBarcode technique (ported from CodeScanner, MIT).
-            // Compensates for the increased minimum focus distance on iPhone 14 Pro+.
-            device.setRecommendedZoomFactor(forMinimumCodeSize: 20)
-            let initialZoom = device.videoZoomFactor
+            // Note: setRecommendedZoomFactor(forMinimumCodeSize:) is intentionally NOT
+            // called here.  That Apple AVCamBarcode technique pre-zooms to compensate
+            // for close-range focus limits (designed for scanning a tiny printed QR at
+            // arm's-length distance).  For Canvas attendance the target is a QR on a
+            // screen 1–5 m away; pre-zooming at startup just crops the viewfinder
+            // unnecessarily.  Dynamic zoom (Layer 2) handles the actual zoom-when-needed
+            // logic entirely on its own.
+            let initialZoom: CGFloat = 1.0
 
             let output = AVCaptureMetadataOutput()
             if captureSession.canAddOutput(output) {
