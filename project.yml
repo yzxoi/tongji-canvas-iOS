@@ -38,6 +38,16 @@ targets:
           UIApplicationSupportsMultipleScenes: false
           UISceneConfigurations: {}
         ITSAppUsesNonExemptEncryption: false
+        # iPhone: portrait only
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+        # iPad: all four orientations required for multitasking (App Store rule)
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
     entitlements:
       path: TongJiCanvas/TongJiCanvas.entitlements
       properties:
