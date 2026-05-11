@@ -244,7 +244,7 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
     // MARK: Session lifecycle
 
     func start() {
-        queue.async { [captureSession] in
+        queue.async { [captureSession, weak self] in
             captureSession.beginConfiguration()
 
             // Prefer builtInDualCamera (iPhone 11+): supports optical zoom via
@@ -275,11 +275,18 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
             }
 
             captureSession.commitConfiguration()
+
+            // FIX: assign captureDevice *before* startRunning() to eliminate the race
+            // condition where the first QR detection fires before the @MainActor Task
+            // below has had a chance to run.  nonisolated(unsafe) permits this write
+            // from a non-actor context.
+            self?.captureDevice = device
+
             captureSession.startRunning()
 
+            // @Published properties must be updated on the main actor.
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.captureDevice  = device
                 self.baseZoomFactor = initialZoom
                 self.zoomFactor     = initialZoom
             }
@@ -365,10 +372,18 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
         // arrives at a more legible size if the QR was small.
         // Runs on DispatchQueue.main (delegate queue set above) — lockForConfiguration
         // is fast enough not to cause perceptible jank.
-        let qrWidth    = obj.bounds.width
-        let device     = captureDevice
+        //
+        // FIX: iPhone sensors capture in landscape orientation regardless of how the
+        // phone is held.  For a square QR code in portrait, bounds.width (horizontal
+        // in sensor space) ≈ qr_pixels / frame_width (e.g. 200/1920 ≈ 0.10) while
+        // bounds.height ≈ qr_pixels / frame_height (e.g. 200/1080 ≈ 0.19).
+        // Using only bounds.width therefore understates the code size by ~44 % and
+        // over-triggers zoom.  max(width, height) gives the correct linear extent of
+        // the square QR regardless of sensor orientation.
+        let qrSize  = max(obj.bounds.width, obj.bounds.height)
+        let device  = captureDevice
         var zoomedTo: CGFloat?
-        if let device, let target = device.targetZoom(forQRWidth: qrWidth) {
+        if let device, let target = device.targetZoom(forQRSize: qrSize) {
             device.rampZoom(toFactor: target)
             zoomedTo = target
         }

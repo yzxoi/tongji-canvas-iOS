@@ -48,21 +48,27 @@ extension AVCaptureDevice {
 
 extension AVCaptureDevice {
 
-    /// Returns the zoom factor needed to bring a small QR code to ~35 % of frame width,
-    /// or `nil` if no adjustment is needed.
+    /// Returns the zoom factor needed to bring a small QR code to ~30 % of the larger
+    /// frame dimension, or `nil` if no adjustment is needed.
     ///
-    /// Only fires when `normalizedWidth < 0.28` (< 28 % of frame) to avoid
-    /// zooming *out* when the user holds the camera very close.
+    /// Pass `max(bounds.width, bounds.height)` from `AVMetadataMachineReadableCodeObject`
+    /// rather than either dimension alone.  iPhone sensors capture in landscape regardless
+    /// of phone orientation; a square QR code's width and height in normalised capture
+    /// coordinates therefore differ by the sensor aspect ratio (~1920/1080 ≈ 1.78×).
+    /// Using the larger dimension gives the correct linear size of the code.
     ///
-    /// - Parameter normalizedWidth: `AVMetadataMachineReadableCodeObject.bounds.width`
-    ///   in capture-device normalised coordinates (0 … 1).
-    func targetZoom(forQRWidth normalizedWidth: CGFloat) -> CGFloat? {
-        guard normalizedWidth > 0.01, normalizedWidth < 0.28 else { return nil }
-        let target:  CGFloat = 0.35
+    /// Threshold is 0.35 (fires when QR < 35 % of the larger frame dimension) so the
+    /// function is inactive when the code is already comfortably readable.
+    ///
+    /// - Parameter normalizedSize: `max(bounds.width, bounds.height)` of the detected
+    ///   code object, in capture-device normalised coordinates (0 … 1).
+    func targetZoom(forQRSize normalizedSize: CGFloat) -> CGFloat? {
+        guard normalizedSize > 0.01, normalizedSize < 0.35 else { return nil }
+        let target:  CGFloat = 0.40           // aim for 40 % of larger frame dimension
         let current: CGFloat = videoZoomFactor
-        let factor           = (current * (target / normalizedWidth))
+        let factor           = (current * (target / normalizedSize))
             .zoomClamped(lo: 1.0, hi: min(maxAvailableVideoZoomFactor, 6.0))
-        guard abs(factor - current) / current > 0.12 else { return nil }   // dead-band
+        guard abs(factor - current) / current > 0.10 else { return nil }   // 10 % dead-band
         return factor
     }
 
@@ -115,7 +121,7 @@ private extension CGFloat {
 extension AVCaptureDevice {
     var maxAvailableVideoZoomFactor: CGFloat { 1.0 }
     func setRecommendedZoomFactor(forMinimumCodeSize minimumCodeSize: Float = 20) {}
-    func targetZoom(forQRWidth normalizedWidth: CGFloat) -> CGFloat? { nil }
+    func targetZoom(forQRSize normalizedSize: CGFloat) -> CGFloat? { nil }
     func rampZoom(toFactor factor: CGFloat, rate: Float = 3.5) {}
     func resetZoom(to factor: CGFloat = 1.0, rate: Float = 2.0) {}
     func setZoomImmediate(_ factor: CGFloat) {}
