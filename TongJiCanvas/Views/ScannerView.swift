@@ -8,42 +8,24 @@ struct ScannerView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var vm = ScannerViewModel()
 
-    /// Zoom level captured at the moment a pinch gesture begins.
-    @State private var pinchBaseZoom: CGFloat = 1.0
-    /// True while a pinch gesture is active — prevents auto-zoom from overwriting the base.
-    @State private var isPinching = false
-
     var body: some View {
         ZStack {
             CameraPreview(session: vm.captureSession)
                 .ignoresSafeArea()
-                .gesture(
-                    MagnificationGesture()
-                        .onChanged { scale in
-                            isPinching = true
-                            vm.setZoom(pinchBaseZoom * scale)
-                        }
-                        .onEnded { _ in
-                            pinchBaseZoom = vm.zoomFactor
-                            isPinching    = false
-                        }
-                )
 
             ScannerOverlay(isPaused: vm.isPaused, isSuccess: vm.detectedURL != nil)
                 .ignoresSafeArea()
+                .allowsHitTesting(false)
 
             topLabels
             bottomControls
             closeButton
         }
+        .onTapGesture(count: 2) { vm.toggleZoom() }
         .onAppear { vm.start() }
         .onDisappear { vm.stop() }
         .onChange(of: vm.detectedURL) { _, url in
             if let url { onDetected(url) }
-        }
-        // Keep pinchBaseZoom in sync with auto-zoom (only when not actively pinching)
-        .onChange(of: vm.zoomFactor) { _, newZoom in
-            if !isPinching { pinchBaseZoom = newZoom }
         }
     }
 
@@ -76,10 +58,9 @@ struct ScannerView: View {
                     Text("Point at QR code")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(.white)
-                    Text("Supports small or skewed codes")
+                    Text("Double-tap to toggle 2× zoom")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.8))
-                    // Zoom level badge — appears when auto-zoom or pinch is active
                     if vm.isZoomed {
                         Text(String(format: "%.1f×", vm.zoomFactor))
                             .font(.caption.weight(.semibold))
@@ -154,7 +135,6 @@ struct ScannerView: View {
 
                 Button {
                     vm.resume()
-                    pinchBaseZoom = 1.0
                 } label: {
                     Label("Scan Again", systemImage: "arrow.counterclockwise")
                         .frame(maxWidth: .infinity)
@@ -182,22 +162,18 @@ struct ScannerView: View {
                 }
                 .buttonStyle(.bordered)
 
-                // Reset-zoom button — visible whenever zoom is elevated above baseline
-                if vm.isZoomed {
-                    Button {
-                        vm.resetZoomManual()
-                        pinchBaseZoom = 1.0
-                    } label: {
-                        Label(String(format: "%.1f×", vm.zoomFactor),
-                              systemImage: "arrow.down.right.and.arrow.up.left")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.blue)
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                Button {
+                    vm.toggleZoom()
+                } label: {
+                    Label(
+                        vm.isZoomed ? String(format: "%.0f×", vm.zoomFactor) : "2×",
+                        systemImage: vm.isZoomed ? "1.magnifyingglass" : "magnifyingglass"
+                    )
+                    .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.bordered)
+                .tint(vm.isZoomed ? .blue : nil)
             }
-            .animation(.easeInOut(duration: 0.2), value: vm.isZoomed)
         }
         .padding(20)
         .background(.regularMaterial)
@@ -221,25 +197,18 @@ struct ScannerView: View {
 @MainActor
 final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutputObjectsDelegate {
     nonisolated(unsafe) let captureSession = AVCaptureSession()
-    /// Retained to drive zoom after session start; nonisolated(unsafe) follows the same
-    /// pattern as captureSession — all AVFoundation calls are serialised via lockForConfiguration.
     nonisolated(unsafe) var captureDevice: AVCaptureDevice?
 
     @Published var isPaused    = false
     @Published var torchOn     = false
     @Published var lastResult: String? = nil
     @Published var detectedURL: URL?   = nil
-    /// Current zoom factor — updated when auto-zoom or pinch fires.
     @Published var zoomFactor: CGFloat = 1.0
 
-    /// True when zoom is meaningfully above the session-start baseline.
-    var isZoomed: Bool { zoomFactor > baseZoomFactor + 0.15 }
+    /// True when zoom is meaningfully above 1.0.
+    var isZoomed: Bool { zoomFactor > 1.15 }
 
     private let queue = DispatchQueue(label: "scanner.queue")
-    /// Zoom set once at session start by setRecommendedZoomFactor — the floor for resets.
-    private var baseZoomFactor: CGFloat = 1.0
-    /// Cancellable task that resets zoom after 3 s of silence.
-    private var resetZoomTask: Task<Void, Never>?
 
     // MARK: Session lifecycle
 
@@ -247,9 +216,6 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
         queue.async { [captureSession, weak self] in
             captureSession.beginConfiguration()
 
-            // Prefer builtInDualCamera (iPhone 11+): supports optical zoom via
-            // virtualDeviceSwitchOverVideoZoomFactors — the system switches
-            // transparently between wide and telephoto lenses as videoZoomFactor rises.
             let preferredType: AVCaptureDevice.DeviceType =
                 AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back) != nil
                 ? .builtInDualCamera
@@ -262,15 +228,6 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
 
             captureSession.addInput(input)
 
-            // Note: setRecommendedZoomFactor(forMinimumCodeSize:) is intentionally NOT
-            // called here.  That Apple AVCamBarcode technique pre-zooms to compensate
-            // for close-range focus limits (designed for scanning a tiny printed QR at
-            // arm's-length distance).  For Canvas attendance the target is a QR on a
-            // screen 1–5 m away; pre-zooming at startup just crops the viewfinder
-            // unnecessarily.  Dynamic zoom (Layer 2) handles the actual zoom-when-needed
-            // logic entirely on its own.
-            let initialZoom: CGFloat = 1.0
-
             let output = AVCaptureMetadataOutput()
             if captureSession.canAddOutput(output) {
                 captureSession.addOutput(output)
@@ -280,26 +237,18 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
 
             captureSession.commitConfiguration()
 
-            // FIX: assign captureDevice *before* startRunning() to eliminate the race
-            // condition where the first QR detection fires before the @MainActor Task
-            // below has had a chance to run.  nonisolated(unsafe) permits this write
-            // from a non-actor context.
             self?.captureDevice = device
-
             captureSession.startRunning()
 
-            // @Published properties must be updated on the main actor.
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.baseZoomFactor = initialZoom
-                self.zoomFactor     = initialZoom
+                self.zoomFactor = device.videoZoomFactor
             }
         }
     }
 
     func stop() {
-        resetZoomTask?.cancel()
-        captureDevice?.resetZoom(to: baseZoomFactor, rate: 4.0)
+        captureDevice?.rampZoom(toFactor: 1.0, rate: 4.0)
         queue.async { [captureSession] in captureSession.stopRunning() }
         setTorch(false)
     }
@@ -311,51 +260,25 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
         setTorch(torchOn)
     }
 
+    /// Toggle between 1× and 2× zoom.  On dual-camera devices this may switch
+    /// from the wide lens to the telephoto lens around the device's switch-over factor.
+    func toggleZoom() {
+        guard let device = captureDevice else { return }
+        let target: CGFloat = zoomFactor > 1.15 ? 1.0 : 2.0
+        device.rampZoom(toFactor: target)
+        withAnimation(.easeOut(duration: 0.3)) { zoomFactor = target }
+    }
+
     func resume() {
         isPaused    = false
         lastResult  = nil
         detectedURL = nil
-        resetZoomTask?.cancel()
-        // Brief delay so the overlay transition completes before zoom resets
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(300))
-            self.captureDevice?.resetZoom(to: self.baseZoomFactor)
-            withAnimation(.easeOut(duration: 0.4)) { self.zoomFactor = self.baseZoomFactor }
-        }
-    }
-
-    /// Called by the pinch gesture — sets zoom immediately without animation.
-    func setZoom(_ factor: CGFloat) {
-        guard let device = captureDevice else { return }
-        // maxAvailableVideoZoomFactor is iOS-only; the macOS stub returns 1.0 (no-op).
-        let maxZoom = Swift.min(device.maxAvailableVideoZoomFactor, 6.0)
-        let clamped = Swift.min(Swift.max(factor, 1.0), maxZoom)
-        device.setZoomImmediate(clamped)
-        zoomFactor = clamped
-        scheduleZoomReset()
-    }
-
-    /// Smoothly returns to the session-start base zoom; called by the reset button.
-    func resetZoomManual() {
-        resetZoomTask?.cancel()
-        captureDevice?.resetZoom(to: baseZoomFactor)
-        withAnimation(.easeOut(duration: 0.35)) { zoomFactor = baseZoomFactor }
-    }
-
-    // MARK: Private
-
-    private func scheduleZoomReset() {
-        resetZoomTask?.cancel()
-        resetZoomTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(3))
-            guard !Task.isCancelled else { return }
-            self.captureDevice?.resetZoom(to: self.baseZoomFactor)
-            withAnimation(.easeOut(duration: 0.5)) { self.zoomFactor = self.baseZoomFactor }
-        }
+        // Reset zoom when re-scanning
+        captureDevice?.rampZoom(toFactor: 1.0)
+        withAnimation(.easeOut(duration: 0.3)) { zoomFactor = 1.0 }
     }
 
     private func setTorch(_ on: Bool) {
-        // Use captureDevice (may be a virtual dual-camera) rather than the default device
         let device = captureDevice ?? AVCaptureDevice.default(for: .video)
         guard let device, device.hasTorch else { return }
         try? device.lockForConfiguration()
@@ -372,31 +295,8 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
               let raw = obj.stringValue, !raw.isEmpty
         else { return }
 
-        // Dynamic zoom: fires before the result is processed so the next frame
-        // arrives at a more legible size if the QR was small.
-        // Runs on DispatchQueue.main (delegate queue set above) — lockForConfiguration
-        // is fast enough not to cause perceptible jank.
-        //
-        // FIX: iPhone sensors capture in landscape orientation regardless of how the
-        // phone is held.  For a square QR code in portrait, bounds.width (horizontal
-        // in sensor space) ≈ qr_pixels / frame_width (e.g. 200/1920 ≈ 0.10) while
-        // bounds.height ≈ qr_pixels / frame_height (e.g. 200/1080 ≈ 0.19).
-        // Using only bounds.width therefore understates the code size by ~44 % and
-        // over-triggers zoom.  max(width, height) gives the correct linear extent of
-        // the square QR regardless of sensor orientation.
-        let qrSize  = max(obj.bounds.width, obj.bounds.height)
-        let device  = captureDevice
-        var zoomedTo: CGFloat?
-        if let device, let target = device.targetZoom(forQRSize: qrSize) {
-            device.rampZoom(toFactor: target)
-            zoomedTo = target
-        }
-
         Task { @MainActor [weak self] in
             guard let self, !self.isPaused else { return }
-
-            if let z = zoomedTo { self.zoomFactor = z }
-            self.scheduleZoomReset()
 
             self.lastResult = raw
             self.isPaused   = true
@@ -434,37 +334,49 @@ struct ScannerOverlay: View {
     let isPaused: Bool
     let isSuccess: Bool
 
-    @State private var lineProgress: CGFloat = 0
+    /// Reference time for the scanning animation cycle.
+    @State private var startTime = Date()
 
     var body: some View {
-        TimelineView(.animation(paused: isPaused)) { _ in
+        TimelineView(.animation(paused: isPaused)) { timeline in
             Canvas { ctx, size in
-                ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black.opacity(0.4)))
-
                 let frame = scanFrame(in: size)
+
+                // Semi-transparent mask with cutout
+                ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black.opacity(0.5)))
                 ctx.blendMode = .destinationOut
-                ctx.fill(Path(roundedRect: frame, cornerRadius: 28), with: .color(.white))
+                ctx.fill(Path(roundedRect: frame, cornerRadius: 24), with: .color(.white))
                 ctx.blendMode = .normal
 
-                let borderColor: Color = isSuccess ? .green.opacity(0.9) : .white.opacity(0.5)
-                ctx.stroke(
-                    Path(roundedRect: frame, cornerRadius: 28),
-                    with: .color(borderColor),
-                    lineWidth: isSuccess ? 4 : 3
-                )
+                // Corner accents
+                let accentColor: Color = isSuccess ? .green : Color(hex: 0xB8A2FF)
+                drawCorners(&ctx, frame: frame, color: accentColor, length: 28, width: 4)
 
+                // Scanning line — position driven by elapsed time, not @State animation
                 if !isPaused {
-                    let lineY = frame.minY + frame.height * lineProgress
+                    let elapsed = timeline.date.timeIntervalSince(startTime)
+                    // Triangle wave: period 2.4 s, range 0…1
+                    let cycle = elapsed.truncatingRemainder(dividingBy: 2.4) / 2.4
+                    let progress = cycle < 0.5 ? cycle * 2 : 2 - cycle * 2
+
+                    let inset: CGFloat = 20
+                    let lineY = frame.minY + inset + (frame.height - 2 * inset) * CGFloat(progress)
                     var line = Path()
-                    line.move(to: CGPoint(x: frame.minX + 16, y: lineY))
-                    line.addLine(to: CGPoint(x: frame.maxX - 16, y: lineY))
-                    ctx.stroke(line, with: .color(.blue.opacity(0.9)), lineWidth: 3)
+                    line.move(to: CGPoint(x: frame.minX + 12, y: lineY))
+                    line.addLine(to: CGPoint(x: frame.maxX - 12, y: lineY))
+                    ctx.stroke(line, with: .color(accentColor.opacity(0.8)), lineWidth: 2.5)
+
+                    // Soft glow
+                    let glowRect = CGRect(x: frame.minX + 12, y: lineY - 8,
+                                          width: frame.width - 24, height: 16)
+                    ctx.fill(Path(roundedRect: glowRect, cornerRadius: 8),
+                             with: .color(accentColor.opacity(0.15)))
                 }
             }
             .compositingGroup()
         }
-        .onAppear { animate() }
-        .onChange(of: isPaused) { _, paused in if !paused { lineProgress = 0; animate() } }
+        .onAppear { startTime = Date() }
+        .onChange(of: isPaused) { _, paused in if !paused { startTime = Date() } }
     }
 
     private func scanFrame(in size: CGSize) -> CGRect {
@@ -476,9 +388,34 @@ struct ScannerOverlay: View {
         )
     }
 
-    private func animate() {
-        withAnimation(.linear(duration: 1.8).repeatForever(autoreverses: false)) {
-            lineProgress = 1
-        }
+    private func drawCorners(_ ctx: inout GraphicsContext, frame: CGRect,
+                             color: Color, length: CGFloat, width: CGFloat) {
+        // Top-left
+        var p = Path()
+        p.move(to: CGPoint(x: frame.minX, y: frame.minY + length))
+        p.addLine(to: CGPoint(x: frame.minX, y: frame.minY))
+        p.addLine(to: CGPoint(x: frame.minX + length, y: frame.minY))
+        ctx.stroke(p, with: .color(color), lineWidth: width)
+
+        // Top-right
+        p = Path()
+        p.move(to: CGPoint(x: frame.maxX - length, y: frame.minY))
+        p.addLine(to: CGPoint(x: frame.maxX, y: frame.minY))
+        p.addLine(to: CGPoint(x: frame.maxX, y: frame.minY + length))
+        ctx.stroke(p, with: .color(color), lineWidth: width)
+
+        // Bottom-left
+        p = Path()
+        p.move(to: CGPoint(x: frame.minX, y: frame.maxY - length))
+        p.addLine(to: CGPoint(x: frame.minX, y: frame.maxY))
+        p.addLine(to: CGPoint(x: frame.minX + length, y: frame.maxY))
+        ctx.stroke(p, with: .color(color), lineWidth: width)
+
+        // Bottom-right
+        p = Path()
+        p.move(to: CGPoint(x: frame.maxX - length, y: frame.maxY))
+        p.addLine(to: CGPoint(x: frame.maxX, y: frame.maxY))
+        p.addLine(to: CGPoint(x: frame.maxX, y: frame.maxY - length))
+        ctx.stroke(p, with: .color(color), lineWidth: width)
     }
 }

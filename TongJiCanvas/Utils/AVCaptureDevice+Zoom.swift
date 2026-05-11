@@ -44,38 +44,19 @@ extension AVCaptureDevice {
     }
 }
 
-// MARK: - Dynamic QR-bounds-driven zoom
+// MARK: - Manual zoom helpers
 
 extension AVCaptureDevice {
 
-    /// Returns the zoom factor needed to bring a small QR code to ~30 % of the larger
-    /// frame dimension, or `nil` if no adjustment is needed.
-    ///
-    /// Pass `max(bounds.width, bounds.height)` from `AVMetadataMachineReadableCodeObject`
-    /// rather than either dimension alone.  iPhone sensors capture in landscape regardless
-    /// of phone orientation; a square QR code's width and height in normalised capture
-    /// coordinates therefore differ by the sensor aspect ratio (~1920/1080 ≈ 1.78×).
-    /// Using the larger dimension gives the correct linear size of the code.
-    ///
-    /// Threshold is 0.35 (fires when QR < 35 % of the larger frame dimension) so the
-    /// function is inactive when the code is already comfortably readable.
-    ///
-    /// - Parameter normalizedSize: `max(bounds.width, bounds.height)` of the detected
-    ///   code object, in capture-device normalised coordinates (0 … 1).
-    func targetZoom(forQRSize normalizedSize: CGFloat) -> CGFloat? {
-        guard normalizedSize > 0.01, normalizedSize < 0.35 else { return nil }
-        let target:  CGFloat = 0.40           // aim for 40 % of larger frame dimension
-        let current: CGFloat = videoZoomFactor
-        let factor           = (current * (target / normalizedSize))
-            .zoomClamped(lo: 1.0, hi: min(maxAvailableVideoZoomFactor, 6.0))
-        guard abs(factor - current) / current > 0.10 else { return nil }   // 10 % dead-band
-        return factor
+    /// The maximum zoom factor the scanner should use (device limit or 6.0, whichever is lower).
+    var scannerMaxZoom: CGFloat {
+        min(maxAvailableVideoZoomFactor, 6.0)
     }
 
     /// Smoothly ramps to `factor` at `rate` zoom-units per second.
     func rampZoom(toFactor factor: CGFloat, rate: Float = 3.5) {
-        let clamped = factor.zoomClamped(lo: minAvailableVideoZoomFactor,
-                                         hi: min(maxAvailableVideoZoomFactor, 6.0))
+        let clamped = factor.zoomClamped(lo: minAvailableVideoZoomFactor, hi: scannerMaxZoom)
+        guard abs(videoZoomFactor - clamped) > 0.01 else { return }
         do {
             try lockForConfiguration()
             ramp(toVideoZoomFactor: clamped, withRate: rate)
@@ -83,22 +64,9 @@ extension AVCaptureDevice {
         } catch { }
     }
 
-    /// Smoothly returns to `factor` (typically the session-start base zoom).
-    func resetZoom(to factor: CGFloat = 1.0, rate: Float = 2.0) {
-        let clamped = factor.zoomClamped(lo: minAvailableVideoZoomFactor,
-                                         hi: maxAvailableVideoZoomFactor)
-        guard abs(videoZoomFactor - clamped) > 0.05 else { return }
-        do {
-            try lockForConfiguration()
-            ramp(toVideoZoomFactor: clamped, withRate: rate)
-            unlockForConfiguration()
-        } catch { }
-    }
-
-    /// Immediately sets `factor` without animation — used for pinch-gesture tracking.
+    /// Immediately sets `factor` without animation.
     func setZoomImmediate(_ factor: CGFloat) {
-        let clamped = factor.zoomClamped(lo: minAvailableVideoZoomFactor,
-                                         hi: min(maxAvailableVideoZoomFactor, 6.0))
+        let clamped = factor.zoomClamped(lo: minAvailableVideoZoomFactor, hi: scannerMaxZoom)
         guard abs(videoZoomFactor - clamped) > 0.01 else { return }
         do {
             try lockForConfiguration()
@@ -120,10 +88,9 @@ private extension CGFloat {
 
 extension AVCaptureDevice {
     var maxAvailableVideoZoomFactor: CGFloat { 1.0 }
+    var scannerMaxZoom: CGFloat { 1.0 }
     func setRecommendedZoomFactor(forMinimumCodeSize minimumCodeSize: Float = 20) {}
-    func targetZoom(forQRSize normalizedSize: CGFloat) -> CGFloat? { nil }
     func rampZoom(toFactor factor: CGFloat, rate: Float = 3.5) {}
-    func resetZoom(to factor: CGFloat = 1.0, rate: Float = 2.0) {}
     func setZoomImmediate(_ factor: CGFloat) {}
 }
 
