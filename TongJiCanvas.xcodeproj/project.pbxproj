@@ -58,7 +58,7 @@
 		5AD172DADA0F9DCCBBCA36AA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5F993CC85621130EA4B0E6E9 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		64FF1AC2E49D08BC4857E2C9 /* BatchSignViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchSignViewModelTests.swift; sourceTree = "<group>"; };
-		663ABD568E2A07319E364054 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		663ABD568E2A07319E364054 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		6A8E8490E4A390FA08AA4503 /* CookieHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookieHelperTests.swift; sourceTree = "<group>"; };
 		6E740D56EB8EE71D00869E6D /* UserSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSession.swift; sourceTree = "<group>"; };
 		73F2F31C5236FA0C25E5A2C4 /* CookieHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookieHelper.swift; sourceTree = "<group>"; };
@@ -76,7 +76,7 @@
 		D30CB8FC0884AF2D78F8C21A /* AVCaptureDevice+Zoom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AVCaptureDevice+Zoom.swift"; sourceTree = "<group>"; };
 		DA4CDAF14DBDE7B02F70777C /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
 		E9AF5FC7F66E60903E447244 /* TongJiCanvasApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TongJiCanvasApp.swift; sourceTree = "<group>"; };
-		F4E5EC2F0656887F696CB32A /* TongJiCanvas.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TongJiCanvas.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F4E5EC2F0656887F696CB32A /* TongJiCanvas.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TongJiCanvas.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F624041DC5828033F0EBB8F4 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -495,8 +495,7 @@
 				CODE_SIGN_ENTITLEMENTS = TongJiCanvas/TongJiCanvas.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 4HJTS3G3T2;
+				CURRENT_PROJECT_VERSION = 2;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = TongJiCanvas/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -504,8 +503,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.yzx.tongji-canvas-ios";
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mln.tongji-canvas-ios";
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -519,8 +518,7 @@
 				CODE_SIGN_ENTITLEMENTS = TongJiCanvas/TongJiCanvas.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 4HJTS3G3T2;
+				CURRENT_PROJECT_VERSION = 2;
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_TESTABILITY = YES;
 				INFOPLIST_FILE = TongJiCanvas/Info.plist;
@@ -529,8 +527,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.yzx.tongji-canvas-ios";
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mln.tongji-canvas-ios";
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
