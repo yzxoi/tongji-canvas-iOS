@@ -108,9 +108,11 @@ struct SessionRepositoryTests {
     // MARK: - Import / Export
 
     @Test func exportThenImportRoundtrip() throws {
-        _ = repo.addOrUpdate(displayName: "Alice", accessToken: "alice_token")
+        let alice = repo.addOrUpdate(displayName: "Alice", accessToken: "alice_token")
         _ = repo.addOrUpdate(displayName: "Bob", accessToken: "bob_token")
-        repo.addCourse(name: "Math")
+        var math = repo.addCourse(name: "Math")
+        math.memberIds = [alice.id]
+        repo.update(math)
 
         let json = repo.exportJSON()
         #expect(!json.isEmpty)
