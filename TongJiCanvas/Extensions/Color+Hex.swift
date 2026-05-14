@@ -58,3 +58,19 @@ enum Spacing {
     static let xl: CGFloat = 20
     static let xxl: CGFloat = 28
 }
+
+// MARK: - Pressable button style
+
+/// Subtle scale + opacity feedback for any button that should feel tactile.
+/// Replaces stock SwiftUI button styling without altering layout.
+struct PressableButtonStyle: ButtonStyle {
+    var pressedScale: CGFloat = 0.96
+    var pressedOpacity: Double = 0.85
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? pressedScale : 1)
+            .opacity(configuration.isPressed ? pressedOpacity : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.75), value: configuration.isPressed)
+    }
+}

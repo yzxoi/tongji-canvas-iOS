@@ -38,19 +38,20 @@ struct SessionCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: Radius.card)
                 .strokeBorder(
-                    isSelected ? Palette.accent.opacity(0.85) : Color(.separator).opacity(0.5),
-                    lineWidth: isSelected ? 1.5 : 1
+                    isSelected ? Palette.accent.opacity(0.85) : Color(.separator).opacity(0.45),
+                    lineWidth: isSelected ? 1.5 : 0.8
                 )
         )
         .shadow(
-            color: isSelected ? Palette.accent.opacity(0.25) : Color.black.opacity(0.04),
+            color: isSelected ? Palette.accent.opacity(0.28) : Color.black.opacity(0.04),
             radius: isSelected ? 10 : 3,
             x: 0,
-            y: isSelected ? 4 : 1
+            y: isSelected ? 5 : 1
         )
         .contentShape(Rectangle())
         .onTapGesture {
-            // Tap toggles the selection — primary use case is fan-out.  Edit via swipe.
+            // Tap toggles selection — primary use case is fan-out.
+            // Edit / delete remain available via the trailing swipe actions.
             withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) {
                 isSelected.toggle()
             }
