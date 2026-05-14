@@ -20,55 +20,107 @@ struct SessionCard: View {
     let onDelete: () -> Void
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: Spacing.lg) {
             avatarView
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(session.displayName)
                     .font(.headline)
                     .lineLimit(1)
+                    .foregroundStyle(Color(.label))
                 statusLabel
             }
-            Spacer()
-            Toggle("", isOn: $isSelected)
-                .labelsHidden()
+            Spacer(minLength: Spacing.sm)
+            selectionIndicator
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .padding(.horizontal, Spacing.xl)
+        .padding(.vertical, Spacing.md + 2)
+        .background(cardBackground)
         .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .strokeBorder(isSelected ? Color(hex: 0xB8A2FF) : Color(.separator), lineWidth: isSelected ? 2 : 1)
+            RoundedRectangle(cornerRadius: Radius.card)
+                .strokeBorder(
+                    isSelected ? Palette.accent.opacity(0.85) : Color(.separator).opacity(0.45),
+                    lineWidth: isSelected ? 1.5 : 0.8
+                )
         )
-        .shadow(color: isSelected ? Color(hex: 0xB8A2FF).opacity(0.35) : Color(.systemBackground).opacity(0.0),
-                radius: isSelected ? 8 : 0, y: isSelected ? 2 : 0)
+        .shadow(
+            color: isSelected ? Palette.accent.opacity(0.28) : Color.black.opacity(0.04),
+            radius: isSelected ? 10 : 3,
+            x: 0,
+            y: isSelected ? 5 : 1
+        )
         .contentShape(Rectangle())
-        .onTapGesture { onEdit() }
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+        .onTapGesture {
+            // Tap toggles selection — primary use case is fan-out.
+            // Edit / delete remain available via the trailing swipe actions.
+            // No explicit withAnimation: SessionCard, CourseCard, and the dock
+            // each declare their own .animation(value:) so they animate in
+            // sync with their own timing curves.  Wrapping the binding in
+            // withAnimation would force the dock to inherit this card's
+            // spring and visibly desync.
+            isSelected.toggle()
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash")
             }
+            Button(action: onEdit) {
+                Label("Edit", systemImage: "pencil")
+            }
+            .tint(Palette.accent)
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)
     }
+
+    // MARK: - Avatar
 
     private var avatarView: some View {
         let style = avatarStyles[abs(session.displayName.hashValue) % avatarStyles.count]
         let initial = session.displayName.first.map(String.init)?.uppercased() ?? "?"
         return ZStack {
             Circle().fill(style.bg)
-            Text(initial).font(.headline).foregroundStyle(style.fg)
+            Text(initial)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(style.fg)
         }
-        .frame(width: 48, height: 48)
+        .frame(width: 44, height: 44)
+        .overlay(
+            Circle().strokeBorder(Color.white.opacity(0.8), lineWidth: 1)
+        )
     }
+
+    // MARK: - Status
 
     private var statusLabel: some View {
         HStack(spacing: 6) {
-            if !session.hasCredentials {
-                Circle().fill(Color.orange).frame(width: 6, height: 6)
-            }
+            Circle()
+                .fill(session.hasCredentials ? Color.green : Color.orange)
+                .frame(width: 6, height: 6)
             Text(session.hasCredentials ? "Credential stored" : "Awaiting credential")
                 .font(.caption)
                 .foregroundStyle(session.hasCredentials ? Color(.secondaryLabel) : .orange)
         }
+    }
+
+    // MARK: - Selection indicator (replaces stock Toggle)
+
+    private var selectionIndicator: some View {
+        ZStack {
+            Circle()
+                .fill(isSelected ? Palette.accent : Color(.tertiarySystemFill))
+                .frame(width: 28, height: 28)
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+    }
+
+    // MARK: - Background
+
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: Radius.card)
+            .fill(Color(.systemBackground))
     }
 }

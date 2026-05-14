@@ -307,32 +307,89 @@ struct BatchSignView: View {
     // MARK: - Summary card
 
     private var summaryCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Fan-out Progress").font(.headline)
+        let isComplete = vm.progress >= 1.0
+        let total      = selectedSessions.count
+        return VStack(alignment: .leading, spacing: Spacing.lg) {
+            HStack(alignment: .center, spacing: Spacing.lg) {
+                progressRing(isComplete: isComplete)
 
-            ProgressView(value: vm.progress)
-                .tint(vm.progress >= 1.0 ? .green : Color(hex: 0x7C3AED))
-
-            HStack(spacing: 20) {
-                Text("Total \(selectedSessions.count)").font(.subheadline)
-                Text("OK \(vm.successCount)").font(.subheadline).foregroundStyle(.green)
-                if vm.failureCount > 0 {
-                    Text("Fail \(vm.failureCount)").font(.subheadline).foregroundStyle(.red)
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(isComplete ? "Fan-out Complete" : "Fan-out in Progress")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Text("\(Int(vm.progress * 100))% · \(total - vm.successCount - vm.failureCount) pending")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
                 }
+                Spacer()
+            }
+
+            HStack(spacing: Spacing.sm) {
+                statTile(label: "Total", value: total, color: .secondary)
+                statTile(label: "OK", value: vm.successCount, color: .green)
+                statTile(label: "Fail", value: vm.failureCount, color: vm.failureCount > 0 ? .red : .secondary)
             }
 
             Label(attendanceURL.absoluteString, systemImage: "link")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.tertiarySystemBackground), in: RoundedRectangle(cornerRadius: Radius.inner))
         }
-        .padding(20)
+        .padding(Spacing.xl)
         .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+    }
+
+    /// Circular progress ring; turns green at completion.
+    private func progressRing(isComplete: Bool) -> some View {
+        let ringColor: Color = isComplete ? .green : Palette.accent
+        return ZStack {
+            Circle()
+                .stroke(ringColor.opacity(0.15), lineWidth: 8)
+            Circle()
+                .trim(from: 0, to: max(vm.progress, 0.001))
+                .stroke(ringColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .animation(.easeOut(duration: 0.3), value: vm.progress)
+            if isComplete {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.green)
+                    .transition(.scale.combined(with: .opacity))
+            } else {
+                Text("\(Int(vm.progress * 100))")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+            }
+        }
+        .frame(width: 60, height: 60)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isComplete)
+    }
+
+    private func statTile(label: String, value: Int, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text("\(value)")
+                .font(.title3.weight(.bold))
+                .monospacedDigit()
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.md - 2)
+        .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: Radius.inner))
     }
 
     private func errorSummaryCard(_ summary: String) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.sm) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
             Text(summary)
@@ -340,9 +397,12 @@ struct BatchSignView: View {
                 .foregroundStyle(.orange)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.orange.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(Spacing.lg)
+        .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: Radius.inner))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.inner)
+                .strokeBorder(Color.orange.opacity(0.25), lineWidth: 1)
+        )
         .transition(.move(edge: .top).combined(with: .opacity))
     }
 
@@ -354,48 +414,57 @@ struct BatchSignView: View {
         let expanded = vm.expandedIds.contains(session.id)
         let hasResult = vm.resultHTML[session.id] != nil
 
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(session.displayName).font(.headline)
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack(spacing: Spacing.md) {
+                statusIcon(status)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(session.displayName)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
                     Text(session.hasCredentials ? "Credential stored" : "No credential")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer()
                 statusBadge(status)
             }
 
             if status == .signing {
-                ProgressView().frame(maxWidth: .infinity).padding(.vertical, 4)
+                LinearProgressBar()
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: Spacing.sm) {
                 if hasResult {
                     Button { vm.toggleExpanded(session.id) } label: {
                         Label(expanded ? "Collapse" : "Inspect",
                               systemImage: expanded ? "chevron.up" : "eye")
+                            .font(.caption.weight(.semibold))
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
+                    .tint(Palette.accent)
                 }
 
                 if status == .failure || status == .expired {
                     Button { vm.retry(session: session) } label: {
-                        Label("Retry", systemImage: "arrow.clockwise").frame(maxWidth: .infinity)
+                        Label("Retry", systemImage: "arrow.clockwise")
+                            .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.borderedProminent)
+                    .tint(status.color)
                 }
             }
 
             if expanded, let html = vm.resultHTML[session.id] {
                 ResultWebView(html: html, baseURL: attendanceURL)
                     .frame(height: 320)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.inner))
             } else if expanded {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: Radius.inner)
                         .fill(Color(.tertiarySystemBackground))
-                    VStack(spacing: 8) {
+                    VStack(spacing: Spacing.sm) {
                         ProgressView()
                         Text(status == .signing ? "Request in flight..." : "Loading...")
                             .font(.caption)
@@ -405,19 +474,64 @@ struct BatchSignView: View {
                 .frame(height: 120)
             }
         }
-        .padding(20)
+        .padding(Spacing.xl)
         .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.card)
+                .strokeBorder(status.color.opacity(status == .signing ? 0.0 : 0.18), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card))
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: expanded)
     }
 
+    private func statusIcon(_ status: SignStatus) -> some View {
+        ZStack {
+            Circle()
+                .fill(status.color.opacity(0.15))
+                .frame(width: 36, height: 36)
+            Image(systemName: status.icon)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(status.color)
+                .symbolEffect(.pulse, options: .repeating, value: status == .signing)
+        }
+    }
+
     private func statusBadge(_ status: SignStatus) -> some View {
-        Label(status.label, systemImage: status.icon)
-            .font(.caption.weight(.semibold))
+        Text(status.label)
+            .font(.caption.weight(.bold))
             .foregroundStyle(status.color)
-            .padding(.horizontal, 12).padding(.vertical, 6)
-            .background(status.color.opacity(0.12))
-            .clipShape(Capsule())
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 5)
+            .background(status.color.opacity(0.12), in: Capsule())
+            .overlay(
+                Capsule()
+                    .strokeBorder(status.color.opacity(0.25), lineWidth: 0.5)
+            )
+    }
+}
+
+// MARK: - Linear progress bar (indeterminate, on-brand)
+
+private struct LinearProgressBar: View {
+    @State private var offset: CGFloat = -1
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Palette.accent.opacity(0.10))
+                Capsule()
+                    .fill(Palette.accentGradient)
+                    .frame(width: geo.size.width * 0.4)
+                    .offset(x: offset * geo.size.width)
+            }
+        }
+        .frame(height: 4)
+        .clipShape(Capsule())
+        .onAppear {
+            withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
+                offset = 1
+            }
+        }
     }
 }
 

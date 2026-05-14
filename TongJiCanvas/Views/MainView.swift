@@ -104,8 +104,54 @@ struct MainView: View {
 
     // MARK: - List content
 
+    @ViewBuilder
     private var listContent: some View {
+        if repo.sessions.isEmpty && repo.courses.isEmpty {
+            emptyState
+        } else {
+            sessionList
+        }
+    }
+
+    private var sessionList: some View {
         List {
+            // MARK: Groups (quick-select). Always shown when any course exists.
+            if !repo.courses.isEmpty {
+                Section {
+                    ForEach(repo.courses) { course in
+                        let members = repo.sessions.filter { course.memberIds.contains($0.id) }
+                        CourseCard(
+                            course: course,
+                            members: members,
+                            selectedIds: selectedIds,
+                            onToggleAll: { toggleCourseSelection(members) },
+                            onEdit: { editingGroup = course }
+                        )
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color(.systemGroupedBackground))
+                    }
+
+                    newGroupRow
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color(.systemGroupedBackground))
+                } header: {
+                    sectionTitle("Groups", icon: "folder.fill", count: repo.courses.count)
+                }
+            } else {
+                // No courses yet — show the New Group row alone so users discover the feature.
+                Section {
+                    newGroupRow
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color(.systemGroupedBackground))
+                } header: {
+                    sectionTitle("Groups", icon: "folder.fill", count: 0)
+                }
+            }
+
+            // MARK: Identities. The primary roster.
             Section {
                 if allUsersExpanded {
                     ForEach(repo.sessions) { session in
@@ -124,43 +170,7 @@ struct MainView: View {
                     }
                 }
             } header: {
-                groupHeader(
-                    title: "Identities", count: repo.sessions.count,
-                    icon: "person.2", color: Color(hex: 0x7C3AED),
-                    expanded: allUsersExpanded
-                ) { allUsersExpanded.toggle() }
-            }
-
-            ForEach(repo.courses) { course in
-                let members = repo.sessions.filter { course.memberIds.contains($0.id) }
-                Section {
-                } header: {
-                    CourseGroupHeader(
-                        course: course,
-                        memberCount: members.count,
-                        allSelected: {
-                            let memberIds = Set(members.map(\.id))
-                            return !memberIds.isEmpty && selectedIds == memberIds
-                        }(),
-                        onTap: { editingGroup = course },
-                        onToggleAll: {
-                            let memberIds = Set(members.map(\.id))
-                            if memberIds.isEmpty { return }
-                            selectedIds = (selectedIds == memberIds) ? [] : memberIds
-                        }
-                    )
-                }
-            }
-
-            Section {
-                Button {
-                    showAddGroup = true
-                } label: {
-                    Label("New Group", systemImage: "folder.badge.plus")
-                        .frame(maxWidth: .infinity)
-                        .foregroundStyle(Color(hex: 0x7C3AED))
-                }
-                .listRowBackground(Color(hex: 0x7C3AED).opacity(0.08))
+                identitiesHeader
             }
         }
         .listStyle(.insetGrouped)
@@ -168,82 +178,319 @@ struct MainView: View {
         .background(Color(.systemGroupedBackground))
     }
 
-    // MARK: - Group header
+    // MARK: - Toggle helper for course selection
 
-    private func groupHeader(
-        title: String, count: Int, icon: String, color: Color,
-        expanded: Bool, onToggle: @escaping () -> Void
-    ) -> some View {
-        Button(action: onToggle) {
-            HStack {
-                Image(systemName: icon).foregroundStyle(color)
-                Text(title).foregroundStyle(color).font(.subheadline.weight(.semibold))
-                Spacer()
-                Text("\(count)").font(.caption.weight(.semibold))
-                    .padding(.horizontal, 10).padding(.vertical, 2)
-                    .background(color.opacity(0.15)).clipShape(Capsule())
-                    .foregroundStyle(color)
-                Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                    .foregroundStyle(color).font(.caption)
+    private func toggleCourseSelection(_ members: [UserSession]) {
+        let memberIds = Set(members.map(\.id))
+        guard !memberIds.isEmpty else { return }
+        let allInSelection = members.allSatisfy { selectedIds.contains($0.id) }
+        if allInSelection {
+            selectedIds.subtract(memberIds)            // deselect this course's members
+        } else {
+            selectedIds.formUnion(memberIds)           // add this course's members
+        }
+    }
+
+    // MARK: - Identities header (with select-all toggle)
+
+    private var identitiesHeader: some View {
+        let allSelected = !repo.sessions.isEmpty
+            && repo.sessions.allSatisfy { selectedIds.contains($0.id) }
+        let partiallySelected = !allSelected
+            && repo.sessions.contains(where: { selectedIds.contains($0.id) })
+
+        return HStack(spacing: Spacing.sm) {
+            Button {
+                allUsersExpanded.toggle()
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    ZStack {
+                        Circle()
+                            .fill(Palette.accent.opacity(0.12))
+                            .frame(width: 26, height: 26)
+                        Image(systemName: "person.2.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Palette.accent)
+                    }
+                    Text("Identities")
+                        .foregroundStyle(Color(.label))
+                        .font(.subheadline.weight(.semibold))
+                    Text("\(repo.sessions.count)")
+                        .font(.caption.weight(.bold))
+                        .monospacedDigit()
+                        .padding(.horizontal, 9).padding(.vertical, 3)
+                        .background(Palette.accent.opacity(0.15))
+                        .clipShape(Capsule())
+                        .foregroundStyle(Palette.accent)
+                    Image(systemName: allUsersExpanded ? "chevron.up" : "chevron.down")
+                        .foregroundStyle(.secondary)
+                        .font(.caption.weight(.semibold))
+                }
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // Select all / clear, only shown when there's something to act on
+            if !repo.sessions.isEmpty {
+                Button {
+                    if allSelected {
+                        selectedIds.subtract(repo.sessions.map(\.id))
+                    } else {
+                        selectedIds.formUnion(repo.sessions.map(\.id))
+                    }
+                } label: {
+                    Text(allSelected ? "Clear" : (partiallySelected ? "Select all" : "Select all"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Palette.accent)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.vertical, 5)
+                        .background(Palette.accent.opacity(0.10), in: Capsule())
+                }
+                .buttonStyle(.plain)
             }
         }
-        .buttonStyle(.plain)
         .textCase(nil)
     }
 
-    // MARK: - Floating dock
+    // MARK: - Section title (used for the Groups section)
 
-    private var floatingDock: some View {
-        HStack(spacing: 10) {
+    private func sectionTitle(_ title: String, icon: String, count: Int) -> some View {
+        HStack(spacing: Spacing.sm) {
+            ZStack {
+                Circle()
+                    .fill(Palette.accent.opacity(0.12))
+                    .frame(width: 26, height: 26)
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.accent)
+            }
+            Text(title)
+                .foregroundStyle(Color(.label))
+                .font(.subheadline.weight(.semibold))
+            if count > 0 {
+                Text("\(count)")
+                    .font(.caption.weight(.bold))
+                    .monospacedDigit()
+                    .padding(.horizontal, 9).padding(.vertical, 3)
+                    .background(Palette.accent.opacity(0.15))
+                    .clipShape(Capsule())
+                    .foregroundStyle(Palette.accent)
+            }
+            Spacer()
+        }
+        .textCase(nil)
+    }
+
+    // MARK: - "New Group" row
+
+    private var newGroupRow: some View {
+        Button {
+            showAddGroup = true
+        } label: {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(Palette.accent)
+                Text("New Group")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Palette.accent)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.accent.opacity(0.6))
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.md + 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.accentSurface.opacity(0.6))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.card)
+                    .strokeBorder(Palette.accent.opacity(0.18), style: StrokeStyle(lineWidth: 1.2, dash: [6, 4]))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Empty state (no identities yet)
+
+    private var emptyState: some View {
+        VStack(spacing: Spacing.xl) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Palette.accent.opacity(0.10))
+                    .frame(width: 120, height: 120)
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 48, weight: .semibold))
+                    .foregroundStyle(Palette.heroGradient)
+            }
+
+            VStack(spacing: Spacing.sm) {
+                Text("No Identities Yet")
+                    .font(.title2.weight(.bold))
+                Text("Add a Canvas account to start fanning out attendance requests.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Spacing.xxl)
+            }
+
             Button {
                 showAddSheet = true
             } label: {
-                Label("Add Identity", systemImage: "plus")
-                    .font(.subheadline.weight(.medium))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .foregroundStyle(Color(.label))
+                Label("Add First Identity", systemImage: "plus.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.vertical, Spacing.md)
+                    .background(Palette.accentGradient)
+                    .foregroundStyle(.white)
+                    .clipShape(Capsule())
             }
             .buttonStyle(.plain)
 
-            let canFanOut = !selectedIds.isEmpty
-            Button {
-                guard canFanOut else { return }
-                showScanner = true
-            } label: {
-                Label(
-                    selectedIds.isEmpty ? "Fan-out" : "Fan-out (\(selectedIds.count))",
-                    systemImage: "point.3.connected.trianglepath.dotted"
-                )
-                .font(.subheadline.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .frame(height: 48)
-                .background(
-                    canFanOut
-                    ? LinearGradient(
-                        colors: [Color(hex: 0x7C3AED), Color(hex: 0x9333EA)],
-                        startPoint: .leading, endPoint: .trailing
-                    )
-                    : LinearGradient(
-                        colors: [Color(.systemFill), Color(.systemFill)],
-                        startPoint: .leading, endPoint: .trailing
-                    )
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .foregroundStyle(canFanOut ? .white : Color(.secondaryLabel))
-            }
-            .disabled(!canFanOut)
-            .buttonStyle(.plain)
+            Spacer()
+            Spacer()
         }
-        .padding(12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+    }
+
+
+    // MARK: - Floating dock
+
+    // MARK: - Floating dock (integrates selection bar + action buttons)
+
+    private var floatingDock: some View {
+        let canFanOut = !selectedIds.isEmpty
+        let validCount = selectedIds.intersection(Set(repo.sessions.map(\.id))).count
+        let hasSelection = validCount > 0
+
+        return VStack(spacing: 0) {
+            // Selection bar — collapses into the dock when nothing is selected.
+            // Keeps a single material+shadow layer for a smooth size animation.
+            if hasSelection {
+                selectionBar(count: validCount)
+            }
+
+            // Action buttons — always present.
+            dockButtons(canFanOut: canFanOut)
+        }
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.card)
+                .strokeBorder(Color(.separator).opacity(0.3), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+        .animation(.spring(response: 0.42, dampingFraction: 0.86), value: hasSelection)
         .confirmationDialog("Add Identity", isPresented: $showAddSheet) {
             Button("Sign in via IAM (auto-capture)") { showOAuthLogin = true }
             Button("Paste Credential") { showManualAdd = true }
             Button("Cancel", role: .cancel) {}
         }
+    }
+
+    /// Top bar that surfaces "N selected · Clear" while the dock holds buttons below.
+    /// Background and corner-radius are inherited from the parent VStack clip, so
+    /// the only thing that animates is this row's height/opacity — no separate
+    /// layer pop-in.
+    private func selectionBar(count: Int) -> some View {
+        HStack(spacing: Spacing.sm) {
+            ZStack {
+                Circle()
+                    .fill(Palette.accent)
+                    .frame(width: 22, height: 22)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            Text("\(count) selected for fan-out")
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(Palette.accentDeep)
+            Spacer(minLength: Spacing.sm)
+            Button {
+                selectedIds.removeAll()
+            } label: {
+                Text("Clear")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.accent)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, 5)
+                    .background(.white.opacity(0.7), in: Capsule())
+                    .overlay(
+                        Capsule().strokeBorder(Palette.accent.opacity(0.2), lineWidth: 0.5)
+                    )
+            }
+            .buttonStyle(PressableButtonStyle())
+        }
+        .padding(.horizontal, Spacing.md + 2)
+        .padding(.vertical, Spacing.sm + 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.accentSurface.opacity(0.65))
+        // Asymmetric transition: slide in from top of the dock, slide out crisper.
+        .transition(.asymmetric(
+            insertion: .move(edge: .bottom).combined(with: .opacity),
+            removal:   .move(edge: .bottom).combined(with: .opacity)
+        ))
+    }
+
+    /// Add-identity + Fan-out CTA row.  Always visible.
+    private func dockButtons(canFanOut: Bool) -> some View {
+        HStack(spacing: Spacing.sm + 2) {
+            Button {
+                showAddSheet = true
+            } label: {
+                Image(systemName: "person.crop.circle.badge.plus")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(Color(.label))
+                    .frame(width: 56, height: 56)
+                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: Radius.inner))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.inner)
+                            .strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5)
+                    )
+            }
+            .buttonStyle(PressableButtonStyle())
+
+            Button {
+                guard canFanOut else { return }
+                showScanner = true
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "qrcode.viewfinder")
+                        .font(.system(size: 18, weight: .bold))
+                    Text(canFanOut ? "Fan-out \(selectedIds.count)" : "Select identities first")
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                    if canFanOut {
+                        Spacer(minLength: 0)
+                        Image(systemName: "arrow.right")
+                            .font(.subheadline.weight(.bold))
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .padding(.horizontal, Spacing.lg)
+                .background(
+                    canFanOut
+                    ? AnyShapeStyle(Palette.accentGradient)
+                    : AnyShapeStyle(Color(.systemFill))
+                )
+                .clipShape(RoundedRectangle(cornerRadius: Radius.inner))
+                .foregroundStyle(canFanOut ? .white : Color(.secondaryLabel))
+                .shadow(color: canFanOut ? Palette.accent.opacity(0.4) : .clear,
+                        radius: canFanOut ? 10 : 0, x: 0, y: 5)
+            }
+            .disabled(!canFanOut)
+            .buttonStyle(PressableButtonStyle())
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: canFanOut)
+        }
+        .padding(.horizontal, Spacing.sm + 2)
+        .padding(.vertical, Spacing.sm + 2)
     }
 
     // MARK: - Color scheme
@@ -260,21 +507,25 @@ struct MainView: View {
 
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
+        // Quick theme toggle — single tap cycles System → Light → Dark → System.
+        ToolbarItem(placement: .topBarLeading) {
+            let current = ColorSchemeMode(rawValue: schemeMode) ?? .system
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    schemeMode = (schemeMode + 1) % 3
+                }
+            } label: {
+                Image(systemName: current.icon)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Palette.accent)
+                    .symbolRenderingMode(.hierarchical)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .accessibilityLabel("Theme: \(current.label)")
+        }
+
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
-                Menu {
-                    ForEach([ColorSchemeMode.system, .light, .dark], id: \.rawValue) { mode in
-                        Button {
-                            schemeMode = mode.rawValue
-                        } label: {
-                            Label(mode.label, systemImage: mode.icon)
-                        }
-                    }
-                } label: {
-                    let current = ColorSchemeMode(rawValue: schemeMode) ?? .system
-                    Label("Theme: \(current.label)", systemImage: current.icon)
-                }
-                Divider()
                 Button { showAbout = true } label: {
                     Label("About", systemImage: "info.circle")
                 }
@@ -289,6 +540,8 @@ struct MainView: View {
                 }
             } label: {
                 Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Palette.accent)
             }
         }
     }
@@ -352,38 +605,209 @@ struct MainView: View {
     }
 }
 
-// MARK: - Course group header component
+// MARK: - Course card (full-width, primary-action = toggle select-all)
 
-private struct CourseGroupHeader: View {
+private struct CourseCard: View {
     let course: Course
-    let memberCount: Int
-    let allSelected: Bool
-    let onTap: () -> Void
+    let members: [UserSession]
+    let selectedIds: Set<UUID>
     let onToggleAll: () -> Void
+    let onEdit: () -> Void
+
+    /// True when every member of this course is in the global selection.
+    private var allSelected: Bool {
+        !members.isEmpty && members.allSatisfy { selectedIds.contains($0.id) }
+    }
+    /// True when *some but not all* members are selected.
+    private var partiallySelected: Bool {
+        !allSelected && members.contains(where: { selectedIds.contains($0.id) })
+    }
+    private var selectedInCourse: Int {
+        members.filter { selectedIds.contains($0.id) }.count
+    }
 
     var body: some View {
-        HStack {
-            Image(systemName: "folder").foregroundStyle(Color(hex: 0xB8A2FF))
-            Text(course.name)
-                .foregroundStyle(Color(hex: 0xB8A2FF))
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-            Spacer()
-            Text("\(memberCount)").font(.caption.weight(.semibold))
-                .padding(.horizontal, 10).padding(.vertical, 2)
-                .background(Color(hex: 0xB8A2FF).opacity(0.15)).clipShape(Capsule())
-                .foregroundStyle(Color(hex: 0xB8A2FF))
-            if memberCount > 0 {
-                Button(action: onToggleAll) {
-                    Image(systemName: allSelected ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(Color(hex: 0xB8A2FF))
-                }
-                .buttonStyle(.plain)
+        HStack(spacing: Spacing.md) {
+            folderIcon
+            VStack(alignment: .leading, spacing: 6) {
+                Text(course.name)
+                    .font(.headline)
+                    .foregroundStyle(allSelected ? .white : Color(.label))
+                    .lineLimit(1)
+                memberRow
+            }
+            Spacer(minLength: Spacing.sm)
+            selectionDot
+            editButton
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.md + 2)
+        .frame(minHeight: 76)
+        .background(cardBackground)
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.card)
+                .strokeBorder(borderColor, lineWidth: borderWidth)
+        )
+        .shadow(
+            color: allSelected ? Palette.accent.opacity(0.35) : Color.black.opacity(0.05),
+            radius: allSelected ? 12 : 4,
+            x: 0,
+            y: allSelected ? 6 : 2
+        )
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onToggleAll)   // implicit animations below drive the visual feedback
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: allSelected)
+        .animation(.easeInOut(duration: 0.2), value: partiallySelected)
+    }
+
+    // MARK: - Folder icon
+
+    private var folderIcon: some View {
+        ZStack {
+            Circle()
+                .fill(allSelected ? Color.white.opacity(0.22) : Palette.accentSurface)
+                .frame(width: 46, height: 46)
+            Image(systemName: "folder.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(allSelected ? .white : Palette.accent)
+        }
+    }
+
+    // MARK: - Avatar stack + count
+
+    @ViewBuilder
+    private var memberRow: some View {
+        if members.isEmpty {
+            Text("No members — tap menu to add")
+                .font(.caption)
+                .foregroundStyle(allSelected ? .white.opacity(0.85) : .secondary)
+        } else {
+            HStack(spacing: Spacing.sm) {
+                avatarStack
+                Text(memberSummary)
+                    .font(.caption.weight(.medium))
+                    .monospacedDigit()
+                    .foregroundStyle(allSelected ? .white.opacity(0.95) : .secondary)
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture { onTap() }
-        .textCase(nil)
+    }
+
+    private var memberSummary: String {
+        if allSelected {
+            return "All \(members.count) selected"
+        } else if partiallySelected {
+            return "\(selectedInCourse) of \(members.count) selected"
+        } else {
+            return "\(members.count) \(members.count == 1 ? "member" : "members")"
+        }
+    }
+
+    private var avatarStack: some View {
+        HStack(spacing: -8) {
+            ForEach(Array(members.prefix(3).enumerated()), id: \.element.id) { _, m in
+                miniAvatar(for: m)
+            }
+            if members.count > 3 {
+                ZStack {
+                    Circle()
+                        .fill(allSelected ? Color.white.opacity(0.25) : Color(.tertiarySystemFill))
+                        .frame(width: 22, height: 22)
+                    Text("+\(members.count - 3)")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(allSelected ? .white : .secondary)
+                }
+                .overlay(
+                    Circle().strokeBorder(allSelected ? Palette.accent : Color(.systemBackground), lineWidth: 2)
+                )
+            }
+        }
+    }
+
+    private func miniAvatar(for session: UserSession) -> some View {
+        let initial = session.displayName.first.map(String.init)?.uppercased() ?? "?"
+        return ZStack {
+            Circle()
+                .fill(allSelected ? Color.white.opacity(0.25) : Palette.accentSurface)
+                .frame(width: 22, height: 22)
+            Text(initial)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(allSelected ? .white : Palette.accentDeep)
+        }
+        .overlay(
+            Circle().strokeBorder(allSelected ? Palette.accent : Color(.systemBackground), lineWidth: 2)
+        )
+    }
+
+    // MARK: - Selection dot (primary feedback)
+
+    private var selectionDot: some View {
+        ZStack {
+            Circle()
+                .fill(dotFill)
+                .frame(width: 32, height: 32)
+                .overlay(
+                    Circle().strokeBorder(dotStroke, lineWidth: 1.5)
+                )
+            if allSelected {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Palette.accent)
+                    .transition(.scale.combined(with: .opacity))
+            } else if partiallySelected {
+                Circle()
+                    .fill(Palette.accent)
+                    .frame(width: 10, height: 10)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+    }
+
+    private var dotFill: Color {
+        if allSelected { return .white }
+        if partiallySelected { return Palette.accentSurface }
+        return Color(.tertiarySystemFill).opacity(0.6)
+    }
+    private var dotStroke: Color {
+        if allSelected { return .clear }
+        return Color(.separator).opacity(0.5)
+    }
+
+    // MARK: - Edit button (secondary action, kept compact)
+
+    private var editButton: some View {
+        Button(action: onEdit) {
+            Image(systemName: "pencil")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(allSelected ? .white : Palette.accent)
+                .frame(width: 32, height: 32)
+                .background(
+                    allSelected ? Color.white.opacity(0.2) : Palette.accentSurface,
+                    in: Circle()
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Card background
+
+    @ViewBuilder
+    private var cardBackground: some View {
+        if allSelected {
+            Palette.accentGradient
+                .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+        } else {
+            Color(.systemBackground)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+        }
+    }
+
+    private var borderColor: Color {
+        if allSelected { return .clear }
+        if partiallySelected { return Palette.accent.opacity(0.6) }
+        return Color(.separator).opacity(0.4)
+    }
+    private var borderWidth: CGFloat {
+        partiallySelected ? 1.5 : 0.8
     }
 }
 
