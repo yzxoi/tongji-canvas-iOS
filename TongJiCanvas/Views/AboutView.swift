@@ -56,7 +56,7 @@ struct AboutView: View {
             }
 
             HStack(spacing: Spacing.sm) {
-                metaPill(icon: "checkmark.seal.fill", text: "v1.0")
+                metaPill(icon: "checkmark.seal.fill", text: "v1.2")
                 metaPill(icon: "swift", text: "Swift 6")
                 metaPill(icon: "apple.logo", text: "iOS 17+")
             }
