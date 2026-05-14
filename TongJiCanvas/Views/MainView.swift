@@ -52,12 +52,8 @@ struct MainView: View {
                 .navigationTitle("Session Mux")
                 .toolbar { toolbarItems }
                 .safeAreaInset(edge: .bottom) {
-                    VStack(spacing: 8) {
-                        selectionSummaryChip
-                        floatingDock
-                    }
-                    .padding(EdgeInsets(top: 0, leading: 12, bottom: 4, trailing: 12))
-                    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedIds.isEmpty)
+                    floatingDock
+                        .padding(EdgeInsets(top: 0, leading: 12, bottom: 4, trailing: 12))
                 }
                 .navigationDestination(item: $attendanceURL) { link in
                     BatchSignView(
@@ -205,9 +201,7 @@ struct MainView: View {
 
         return HStack(spacing: Spacing.sm) {
             Button {
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                    allUsersExpanded.toggle()
-                }
+                allUsersExpanded.toggle()
             } label: {
                 HStack(spacing: Spacing.sm) {
                     ZStack {
@@ -240,12 +234,10 @@ struct MainView: View {
             // Select all / clear, only shown when there's something to act on
             if !repo.sessions.isEmpty {
                 Button {
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                        if allSelected {
-                            selectedIds.subtract(repo.sessions.map(\.id))
-                        } else {
-                            selectedIds.formUnion(repo.sessions.map(\.id))
-                        }
+                    if allSelected {
+                        selectedIds.subtract(repo.sessions.map(\.id))
+                    } else {
+                        selectedIds.formUnion(repo.sessions.map(\.id))
                     }
                 } label: {
                     Text(allSelected ? "Clear" : (partiallySelected ? "Select all" : "Select all"))
@@ -369,55 +361,86 @@ struct MainView: View {
 
     // MARK: - Floating dock
 
-    // MARK: - Selection summary chip (above the dock when something is selected)
-
-    @ViewBuilder
-    private var selectionSummaryChip: some View {
-        let validCount = selectedIds.intersection(Set(repo.sessions.map(\.id))).count
-        if validCount > 0 {
-            HStack(spacing: Spacing.sm) {
-                ZStack {
-                    Circle()
-                        .fill(Palette.accent)
-                        .frame(width: 22, height: 22)
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-                Text("\(validCount) selected for fan-out")
-                    .font(.caption.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.accentDeep)
-                Spacer(minLength: Spacing.sm)
-                Button {
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                        selectedIds.removeAll()
-                    }
-                } label: {
-                    Text("Clear")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Palette.accent)
-                        .padding(.horizontal, Spacing.md)
-                        .padding(.vertical, 5)
-                        .background(.white.opacity(0.7), in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm + 2)
-            .background(Palette.accentSurface, in: Capsule())
-            .overlay(
-                Capsule()
-                    .strokeBorder(Palette.accent.opacity(0.25), lineWidth: 1)
-            )
-            .transition(.move(edge: .bottom).combined(with: .opacity))
-        }
-    }
+    // MARK: - Floating dock (integrates selection bar + action buttons)
 
     private var floatingDock: some View {
         let canFanOut = !selectedIds.isEmpty
-        return HStack(spacing: Spacing.sm + 2) {
-            // Add-identity: compact icon button, leaves room for the fan-out CTA.
+        let validCount = selectedIds.intersection(Set(repo.sessions.map(\.id))).count
+        let hasSelection = validCount > 0
+
+        return VStack(spacing: 0) {
+            // Selection bar — collapses into the dock when nothing is selected.
+            // Keeps a single material+shadow layer for a smooth size animation.
+            if hasSelection {
+                selectionBar(count: validCount)
+            }
+
+            // Action buttons — always present.
+            dockButtons(canFanOut: canFanOut)
+        }
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.card)
+                .strokeBorder(Color(.separator).opacity(0.3), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+        .animation(.spring(response: 0.42, dampingFraction: 0.86), value: hasSelection)
+        .confirmationDialog("Add Identity", isPresented: $showAddSheet) {
+            Button("Sign in via IAM (auto-capture)") { showOAuthLogin = true }
+            Button("Paste Credential") { showManualAdd = true }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    /// Top bar that surfaces "N selected · Clear" while the dock holds buttons below.
+    /// Background and corner-radius are inherited from the parent VStack clip, so
+    /// the only thing that animates is this row's height/opacity — no separate
+    /// layer pop-in.
+    private func selectionBar(count: Int) -> some View {
+        HStack(spacing: Spacing.sm) {
+            ZStack {
+                Circle()
+                    .fill(Palette.accent)
+                    .frame(width: 22, height: 22)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            Text("\(count) selected for fan-out")
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(Palette.accentDeep)
+            Spacer(minLength: Spacing.sm)
+            Button {
+                selectedIds.removeAll()
+            } label: {
+                Text("Clear")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.accent)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, 5)
+                    .background(.white.opacity(0.7), in: Capsule())
+                    .overlay(
+                        Capsule().strokeBorder(Palette.accent.opacity(0.2), lineWidth: 0.5)
+                    )
+            }
+            .buttonStyle(PressableButtonStyle())
+        }
+        .padding(.horizontal, Spacing.md + 2)
+        .padding(.vertical, Spacing.sm + 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.accentSurface.opacity(0.65))
+        // Asymmetric transition: slide in from top of the dock, slide out crisper.
+        .transition(.asymmetric(
+            insertion: .move(edge: .bottom).combined(with: .opacity),
+            removal:   .move(edge: .bottom).combined(with: .opacity)
+        ))
+    }
+
+    /// Add-identity + Fan-out CTA row.  Always visible.
+    private func dockButtons(canFanOut: Bool) -> some View {
+        HStack(spacing: Spacing.sm + 2) {
             Button {
                 showAddSheet = true
             } label: {
@@ -433,7 +456,6 @@ struct MainView: View {
             }
             .buttonStyle(PressableButtonStyle())
 
-            // Fan-out: hero CTA, takes the rest of the width.
             Button {
                 guard canFanOut else { return }
                 showScanner = true
@@ -469,17 +491,6 @@ struct MainView: View {
         }
         .padding(.horizontal, Spacing.sm + 2)
         .padding(.vertical, Spacing.sm + 2)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.card))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.card)
-                .strokeBorder(Color(.separator).opacity(0.3), lineWidth: 0.5)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
-        .confirmationDialog("Add Identity", isPresented: $showAddSheet) {
-            Button("Sign in via IAM (auto-capture)") { showOAuthLogin = true }
-            Button("Paste Credential") { showManualAdd = true }
-            Button("Cancel", role: .cancel) {}
-        }
     }
 
     // MARK: - Color scheme
@@ -644,11 +655,7 @@ private struct CourseCard: View {
             y: allSelected ? 6 : 2
         )
         .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                onToggleAll()
-            }
-        }
+        .onTapGesture(perform: onToggleAll)   // implicit animations below drive the visual feedback
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: allSelected)
         .animation(.easeInOut(duration: 0.2), value: partiallySelected)
     }

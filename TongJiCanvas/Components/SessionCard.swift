@@ -52,9 +52,12 @@ struct SessionCard: View {
         .onTapGesture {
             // Tap toggles selection — primary use case is fan-out.
             // Edit / delete remain available via the trailing swipe actions.
-            withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) {
-                isSelected.toggle()
-            }
+            // No explicit withAnimation: SessionCard, CourseCard, and the dock
+            // each declare their own .animation(value:) so they animate in
+            // sync with their own timing curves.  Wrapping the binding in
+            // withAnimation would force the dock to inherit this card's
+            // spring and visibly desync.
+            isSelected.toggle()
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive, action: onDelete) {
