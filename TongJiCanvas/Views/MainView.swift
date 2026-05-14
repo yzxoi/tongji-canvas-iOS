@@ -104,7 +104,16 @@ struct MainView: View {
 
     // MARK: - List content
 
+    @ViewBuilder
     private var listContent: some View {
+        if repo.sessions.isEmpty && repo.courses.isEmpty {
+            emptyState
+        } else {
+            sessionList
+        }
+    }
+
+    private var sessionList: some View {
         List {
             Section {
                 if allUsersExpanded {
@@ -126,7 +135,7 @@ struct MainView: View {
             } header: {
                 groupHeader(
                     title: "Identities", count: repo.sessions.count,
-                    icon: "person.2", color: Color(hex: 0x7C3AED),
+                    icon: "person.2.fill", color: Palette.accent,
                     expanded: allUsersExpanded
                 ) { allUsersExpanded.toggle() }
             }
@@ -156,15 +165,69 @@ struct MainView: View {
                 Button {
                     showAddGroup = true
                 } label: {
-                    Label("New Group", systemImage: "folder.badge.plus")
-                        .frame(maxWidth: .infinity)
-                        .foregroundStyle(Color(hex: 0x7C3AED))
+                    HStack(spacing: Spacing.sm) {
+                        Image(systemName: "folder.badge.plus")
+                            .font(.subheadline.weight(.semibold))
+                        Text("New Group")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .opacity(0.6)
+                    }
+                    .foregroundStyle(Palette.accent)
+                    .padding(.vertical, Spacing.xs)
                 }
-                .listRowBackground(Color(hex: 0x7C3AED).opacity(0.08))
+                .listRowBackground(Palette.accent.opacity(0.06))
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.visible)
+        .background(Color(.systemGroupedBackground))
+    }
+
+    // MARK: - Empty state (no identities yet)
+
+    private var emptyState: some View {
+        VStack(spacing: Spacing.xl) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Palette.accent.opacity(0.10))
+                    .frame(width: 120, height: 120)
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 48, weight: .semibold))
+                    .foregroundStyle(Palette.heroGradient)
+            }
+
+            VStack(spacing: Spacing.sm) {
+                Text("No Identities Yet")
+                    .font(.title2.weight(.bold))
+                Text("Add a Canvas account to start fanning out attendance requests.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Spacing.xxl)
+            }
+
+            Button {
+                showAddSheet = true
+            } label: {
+                Label("Add First Identity", systemImage: "plus.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.vertical, Spacing.md)
+                    .background(Palette.accentGradient)
+                    .foregroundStyle(.white)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
     }
 
@@ -175,16 +238,29 @@ struct MainView: View {
         expanded: Bool, onToggle: @escaping () -> Void
     ) -> some View {
         Button(action: onToggle) {
-            HStack {
-                Image(systemName: icon).foregroundStyle(color)
-                Text(title).foregroundStyle(color).font(.subheadline.weight(.semibold))
+            HStack(spacing: Spacing.sm) {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.12))
+                        .frame(width: 26, height: 26)
+                    Image(systemName: icon)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(color)
+                }
+                Text(title)
+                    .foregroundStyle(Color(.label))
+                    .font(.subheadline.weight(.semibold))
                 Spacer()
-                Text("\(count)").font(.caption.weight(.semibold))
-                    .padding(.horizontal, 10).padding(.vertical, 2)
-                    .background(color.opacity(0.15)).clipShape(Capsule())
+                Text("\(count)")
+                    .font(.caption.weight(.bold))
+                    .monospacedDigit()
+                    .padding(.horizontal, 9).padding(.vertical, 3)
+                    .background(color.opacity(0.15))
+                    .clipShape(Capsule())
                     .foregroundStyle(color)
                 Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                    .foregroundStyle(color).font(.caption)
+                    .foregroundStyle(.secondary)
+                    .font(.caption.weight(.semibold))
             }
         }
         .buttonStyle(.plain)
@@ -194,51 +270,61 @@ struct MainView: View {
     // MARK: - Floating dock
 
     private var floatingDock: some View {
-        HStack(spacing: 10) {
+        let canFanOut = !selectedIds.isEmpty
+        return HStack(spacing: Spacing.sm + 2) {
             Button {
                 showAddSheet = true
             } label: {
-                Label("Add Identity", systemImage: "plus")
-                    .font(.subheadline.weight(.medium))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .foregroundStyle(Color(.label))
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Add Identity")
+                        .font(.subheadline.weight(.medium))
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: Radius.inner))
+                .foregroundStyle(Color(.label))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.inner)
+                        .strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5)
+                )
             }
             .buttonStyle(.plain)
 
-            let canFanOut = !selectedIds.isEmpty
             Button {
                 guard canFanOut else { return }
                 showScanner = true
             } label: {
-                Label(
-                    selectedIds.isEmpty ? "Fan-out" : "Fan-out (\(selectedIds.count))",
-                    systemImage: "point.3.connected.trianglepath.dotted"
-                )
-                .font(.subheadline.weight(.semibold))
+                HStack(spacing: 6) {
+                    Image(systemName: "point.3.connected.trianglepath.dotted")
+                        .font(.subheadline.weight(.semibold))
+                    Text(canFanOut ? "Fan-out · \(selectedIds.count)" : "Fan-out")
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                }
                 .frame(maxWidth: .infinity)
                 .frame(height: 48)
                 .background(
                     canFanOut
-                    ? LinearGradient(
-                        colors: [Color(hex: 0x7C3AED), Color(hex: 0x9333EA)],
-                        startPoint: .leading, endPoint: .trailing
-                    )
-                    : LinearGradient(
-                        colors: [Color(.systemFill), Color(.systemFill)],
-                        startPoint: .leading, endPoint: .trailing
-                    )
+                    ? AnyShapeStyle(Palette.accentGradient)
+                    : AnyShapeStyle(Color(.systemFill))
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.inner))
                 .foregroundStyle(canFanOut ? .white : Color(.secondaryLabel))
+                .shadow(color: canFanOut ? Palette.accent.opacity(0.35) : .clear,
+                        radius: canFanOut ? 8 : 0, x: 0, y: 4)
             }
             .disabled(!canFanOut)
             .buttonStyle(.plain)
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: canFanOut)
         }
-        .padding(12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
+        .padding(Spacing.md)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.card))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.card)
+                .strokeBorder(Color(.separator).opacity(0.3), lineWidth: 0.5)
+        )
         .confirmationDialog("Add Identity", isPresented: $showAddSheet) {
             Button("Sign in via IAM (auto-capture)") { showOAuthLogin = true }
             Button("Paste Credential") { showManualAdd = true }
