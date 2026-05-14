@@ -161,6 +161,7 @@ struct ScannerView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                .tint(Color(hex: 0x7C3AED))
 
                 Button {
                     vm.toggleZoom()
@@ -172,7 +173,7 @@ struct ScannerView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
-                .tint(vm.isZoomed ? Color(hex: 0x7C3AED) : nil)
+                .tint(Color(hex: 0x7C3AED))
             }
         }
         .padding(20)
