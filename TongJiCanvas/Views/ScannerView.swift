@@ -10,17 +10,34 @@ struct ScannerView: View {
 
     var body: some View {
         ZStack {
+            // 1. Camera preview (full-screen, behind everything)
             CameraPreview(session: vm.captureSession)
                 .ignoresSafeArea()
 
-            ScannerOverlay(isPaused: vm.isPaused, isSuccess: vm.detectedURL != nil)
-                .ignoresSafeArea()
+            // 2. Dimmed overlay with cut-out viewfinder + animated scanning line
+            ScannerOverlay(
+                isPaused: vm.isPaused,
+                state: overlayState
+            )
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+
+            // 3. State-driven hero (centred over the viewfinder when paused)
+            heroOverlay
                 .allowsHitTesting(false)
 
-            topLabels
-            bottomControls
-            closeButton
+            // 4. Foreground chrome
+            VStack {
+                topBar
+                Spacer()
+                zoomPill
+                Spacer().frame(height: 12)
+                bottomCard
+            }
+            .padding(.horizontal, 20)
         }
+        .background(Color.black)
+        .preferredColorScheme(.dark)
         .onTapGesture(count: 2) { vm.toggleZoom() }
         .onAppear { vm.start() }
         .onDisappear { vm.stop() }
@@ -29,168 +46,307 @@ struct ScannerView: View {
         }
     }
 
-    // MARK: - Top feedback
+    private var overlayState: ScannerOverlay.State {
+        if vm.detectedURL != nil { return .success }
+        if vm.isPaused           { return .invalid }
+        return .scanning
+    }
 
-    private var topLabels: some View {
-        Group {
+    // MARK: - Top bar (close + status)
+
+    private var topBar: some View {
+        HStack {
+            // Close button
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 38, height: 38)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .overlay(Circle().strokeBorder(.white.opacity(0.15), lineWidth: 0.5))
+            }
+            .buttonStyle(PressableButtonStyle())
+
+            Spacer()
+
+            // Status chip
+            statusChip
+                .id(overlayState)
+                .transition(.scale.combined(with: .opacity))
+        }
+        .padding(.top, 12)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: overlayState)
+    }
+
+    @ViewBuilder
+    private var statusChip: some View {
+        switch overlayState {
+        case .scanning:
+            chip(icon: "qrcode.viewfinder", label: "Scanning…", tint: Palette.accentMuted)
+        case .success:
+            chip(icon: "checkmark", label: "Acquired", tint: .green)
+        case .invalid:
+            chip(icon: "exclamationmark.triangle.fill", label: "Invalid Target", tint: .orange)
+        }
+    }
+
+    private func chip(icon: String, label: String, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption.weight(.bold))
+            Text(label)
+                .font(.caption.weight(.semibold))
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, 12).padding(.vertical, 7)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().strokeBorder(tint.opacity(0.4), lineWidth: 0.5))
+    }
+
+    // MARK: - Centre hero (success checkmark / warning glyph)
+
+    @ViewBuilder
+    private var heroOverlay: some View {
+        ZStack {
             if vm.isPaused {
                 if vm.detectedURL != nil {
-                    VStack(spacing: 8) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(.green)
-                        Text("Target Acquired")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(.white)
-                    }
+                    successGlyph
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
                 } else {
-                    VStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(.orange)
-                        Text("Invalid Target")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(.white)
-                    }
-                }
-            } else {
-                VStack(spacing: 6) {
-                    Text("Point at QR code")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.white)
-                    Text("Double-tap to toggle 2× zoom")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.8))
-                    if vm.isZoomed {
-                        Text(String(format: "%.1f×", vm.zoomFactor))
-                            .font(.caption.weight(.semibold))
-                            .monospacedDigit()
-                            .padding(.horizontal, 10).padding(.vertical, 4)
-                            .background(.black.opacity(0.55), in: Capsule())
-                            .foregroundStyle(.white)
-                            .transition(.opacity.combined(with: .scale(scale: 0.85)))
-                    }
+                    invalidGlyph
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
                 }
             }
         }
-        .padding(.top, 80)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: vm.isPaused)
-        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: vm.detectedURL != nil)
-        .animation(.easeInOut(duration: 0.2), value: vm.isZoomed)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .offset(y: -50)        // sit just above viewfinder centre
+        .animation(.spring(response: 0.45, dampingFraction: 0.65), value: overlayState)
     }
 
-    // MARK: - Bottom controls
+    private var successGlyph: some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(colors: [Color.green, Color(hex: 0x10B981)],
+                                     startPoint: .topLeading,
+                                     endPoint: .bottomTrailing))
+                .frame(width: 90, height: 90)
+                .shadow(color: .green.opacity(0.5), radius: 16, y: 6)
+            Image(systemName: "checkmark")
+                .font(.system(size: 42, weight: .bold))
+                .foregroundStyle(.white)
+        }
+    }
 
-    private var bottomControls: some View {
-        VStack(spacing: 12) {
-            if let last = vm.lastResult {
-                Label(last, systemImage: "qrcode.viewfinder")
-                    .lineLimit(1)
-                    .font(.caption.weight(.medium))
-                    .padding(.horizontal, 16).padding(.vertical, 8)
-                    .background(.regularMaterial)
-                    .clipShape(Capsule())
+    private var invalidGlyph: some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(colors: [.orange, Color(hex: 0xF59E0B)],
+                                     startPoint: .topLeading,
+                                     endPoint: .bottomTrailing))
+                .frame(width: 90, height: 90)
+                .shadow(color: .orange.opacity(0.5), radius: 16, y: 6)
+            Image(systemName: "exclamationmark")
+                .font(.system(size: 42, weight: .bold))
+                .foregroundStyle(.white)
+        }
+    }
+
+    // MARK: - Zoom pill (small indicator beneath viewfinder)
+
+    @ViewBuilder
+    private var zoomPill: some View {
+        if vm.isZoomed {
+            HStack(spacing: 6) {
+                Image(systemName: "plus.magnifyingglass")
+                    .font(.caption.weight(.bold))
+                Text(String(format: "%.1f×", vm.zoomFactor))
+                    .font(.caption.weight(.bold))
+                    .monospacedDigit()
             }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(.white.opacity(0.2), lineWidth: 0.5))
+            .transition(.scale.combined(with: .opacity))
+            .animation(.spring(response: 0.3, dampingFraction: 0.75), value: vm.isZoomed)
+        }
+    }
 
+    // MARK: - Bottom card (controls / detected)
+
+    @ViewBuilder
+    private var bottomCard: some View {
+        Group {
             if vm.isPaused {
-                detectedCard
+                if vm.detectedURL != nil {
+                    successCard
+                } else {
+                    invalidCard
+                }
             } else {
                 scanningCard
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 48)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: vm.isPaused)
-    }
-
-    @ViewBuilder
-    private var detectedCard: some View {
-        if vm.detectedURL != nil {
-            VStack(spacing: 12) {
-                ProgressView()
-                Text("Proceeding to fan-out...")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(20)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-        } else {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                    Text("Not a valid target URL").font(.subheadline.weight(.semibold))
-                    Spacer()
-                }
-
-                if let raw = vm.lastResult {
-                    Text(raw)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-
-                Button {
-                    vm.resume()
-                } label: {
-                    Label("Scan Again", systemImage: "arrow.counterclockwise")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .padding(20)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-        }
+        .padding(.bottom, 32)
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: vm.isPaused)
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: vm.detectedURL != nil)
     }
 
     private var scanningCard: some View {
-        VStack(spacing: 12) {
-            Text("Place QR code in viewfinder").font(.body)
-            HStack(spacing: 10) {
-                Button {
-                    vm.toggleTorch()
-                } label: {
-                    Label(
-                        vm.torchOn ? "Torch Off" : "Torch On",
-                        systemImage: vm.torchOn ? "flashlight.off.fill" : "flashlight.on.fill"
-                    )
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .tint(Color(hex: 0x7C3AED))
+        VStack(spacing: 14) {
+            // Hint line
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(Palette.accent)
+                    .frame(width: 8, height: 8)
+                    .scaleEffect(scanPulse)
+                    .opacity(2 - scanPulse)
+                    .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true),
+                               value: scanPulse)
+                    .onAppear { scanPulse = 1.6 }
+                Text("Hold QR code inside the frame")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+            }
 
-                Button {
-                    vm.toggleZoom()
-                } label: {
-                    Label(
-                        vm.isZoomed ? String(format: "%.0f×", vm.zoomFactor) : "2×",
-                        systemImage: vm.isZoomed ? "1.magnifyingglass" : "magnifyingglass"
-                    )
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .tint(Color(hex: 0x7C3AED))
+            HStack(spacing: 10) {
+                glassButton(
+                    icon: vm.torchOn ? "flashlight.on.fill" : "flashlight.off.fill",
+                    label: vm.torchOn ? "Torch On" : "Torch",
+                    isActive: vm.torchOn,
+                    action: vm.toggleTorch
+                )
+
+                glassButton(
+                    icon: "plus.magnifyingglass",
+                    label: vm.isZoomed ? String(format: "%.1f×", vm.zoomFactor) : "Zoom 2×",
+                    isActive: vm.isZoomed,
+                    action: vm.toggleZoom
+                )
             }
         }
-        .padding(20)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .padding(18)
+        .frame(maxWidth: .infinity)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.3), radius: 12, y: 6)
     }
 
-    private var closeButton: some View {
-        Button { dismiss() } label: {
-            Image(systemName: "xmark.circle.fill")
-                .font(.title2)
-                .foregroundStyle(.white.opacity(0.8))
-                .padding(16)
+    private var successCard: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .tint(.green)
+                Text("Proceeding to fan-out…")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+            }
+            if let url = vm.detectedURL {
+                Text(url.absoluteString)
+                    .font(.caption.weight(.regular))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-        .padding(.top, 48)
+        .padding(18)
+        .frame(maxWidth: .infinity)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .strokeBorder(Color.green.opacity(0.35), lineWidth: 1)
+        )
+        .shadow(color: .green.opacity(0.25), radius: 14, y: 6)
     }
+
+    private var invalidCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                Text("Not a Canvas attendance link")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+            }
+            if let raw = vm.lastResult {
+                Text(raw)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.65))
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            }
+            Button {
+                vm.resume()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.counterclockwise")
+                    Text("Scan again")
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 46)
+                .background(Palette.accentGradient, in: RoundedRectangle(cornerRadius: 14))
+                .shadow(color: Palette.accent.opacity(0.4), radius: 8, y: 4)
+            }
+            .buttonStyle(PressableButtonStyle())
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .strokeBorder(.orange.opacity(0.35), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.3), radius: 12, y: 6)
+    }
+
+    // MARK: - Glass control button
+
+    private func glassButton(
+        icon: String,
+        label: String,
+        isActive: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.subheadline.weight(.bold))
+                Text(label)
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+            }
+            .foregroundStyle(isActive ? .white : .white.opacity(0.9))
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .background(
+                isActive
+                ? AnyShapeStyle(Palette.accentGradient)
+                : AnyShapeStyle(Color.white.opacity(0.12))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(.white.opacity(isActive ? 0 : 0.18), lineWidth: 0.5)
+            )
+            .shadow(color: isActive ? Palette.accent.opacity(0.35) : .clear,
+                    radius: isActive ? 8 : 0, y: 4)
+        }
+        .buttonStyle(PressableButtonStyle())
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isActive)
+    }
+
+    // MARK: - Local animation state
+
+    @State private var scanPulse: CGFloat = 0.6
 }
 
 // MARK: - ViewModel
@@ -333,46 +489,48 @@ struct CameraPreview: UIViewRepresentable {
 // MARK: - Scanner Overlay
 
 struct ScannerOverlay: View {
+    enum State { case scanning, success, invalid }
+
     let isPaused: Bool
-    let isSuccess: Bool
+    let state: State
 
     /// Reference time for the scanning animation cycle.
-    @State private var startTime = Date()
+    @SwiftUI.State private var startTime = Date()
 
     var body: some View {
         TimelineView(.animation(paused: isPaused)) { timeline in
             Canvas { ctx, size in
                 let frame = scanFrame(in: size)
 
-                // Semi-transparent mask with cutout
-                ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black.opacity(0.5)))
+                // Dim outside the viewfinder cutout
+                ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black.opacity(0.55)))
                 ctx.blendMode = .destinationOut
-                ctx.fill(Path(roundedRect: frame, cornerRadius: 24), with: .color(.white))
+                ctx.fill(Path(roundedRect: frame, cornerRadius: 28), with: .color(.white))
                 ctx.blendMode = .normal
 
-                // Corner accents
-                let accentColor: Color = isSuccess ? .green : Color(hex: 0xB8A2FF)
-                drawCorners(&ctx, frame: frame, color: accentColor, length: 28, width: 4)
+                // Corner accents — colour reflects state
+                let accent = stateColor
+                drawCorners(&ctx, frame: frame, color: accent, length: 32, width: 5)
 
-                // Scanning line — position driven by elapsed time, not @State animation
+                // Scanning line — only while actively scanning
                 if !isPaused {
                     let elapsed = timeline.date.timeIntervalSince(startTime)
-                    // Triangle wave: period 2.4 s, range 0…1
                     let cycle = elapsed.truncatingRemainder(dividingBy: 2.4) / 2.4
                     let progress = cycle < 0.5 ? cycle * 2 : 2 - cycle * 2
-
-                    let inset: CGFloat = 20
+                    let inset: CGFloat = 24
                     let lineY = frame.minY + inset + (frame.height - 2 * inset) * CGFloat(progress)
-                    var line = Path()
-                    line.move(to: CGPoint(x: frame.minX + 12, y: lineY))
-                    line.addLine(to: CGPoint(x: frame.maxX - 12, y: lineY))
-                    ctx.stroke(line, with: .color(accentColor.opacity(0.8)), lineWidth: 2.5)
 
-                    // Soft glow
-                    let glowRect = CGRect(x: frame.minX + 12, y: lineY - 8,
-                                          width: frame.width - 24, height: 16)
-                    ctx.fill(Path(roundedRect: glowRect, cornerRadius: 8),
-                             with: .color(accentColor.opacity(0.15)))
+                    // Soft glow band
+                    let bandRect = CGRect(x: frame.minX + 12, y: lineY - 18,
+                                          width: frame.width - 24, height: 36)
+                    ctx.fill(Path(roundedRect: bandRect, cornerRadius: 12),
+                             with: .color(accent.opacity(0.18)))
+
+                    // Crisp scan line
+                    var line = Path()
+                    line.move(to: CGPoint(x: frame.minX + 16, y: lineY))
+                    line.addLine(to: CGPoint(x: frame.maxX - 16, y: lineY))
+                    ctx.stroke(line, with: .color(accent.opacity(0.95)), lineWidth: 2.5)
                 }
             }
             .compositingGroup()
@@ -381,8 +539,16 @@ struct ScannerOverlay: View {
         .onChange(of: isPaused) { _, paused in if !paused { startTime = Date() } }
     }
 
+    private var stateColor: Color {
+        switch state {
+        case .scanning: return .white
+        case .success:  return .green
+        case .invalid:  return .orange
+        }
+    }
+
     private func scanFrame(in size: CGSize) -> CGRect {
-        let side = min(size.width, size.height) * 0.65
+        let side = min(size.width, size.height) * 0.68
         return CGRect(
             x: (size.width  - side) / 2,
             y: (size.height - side) / 2.2,
@@ -392,32 +558,43 @@ struct ScannerOverlay: View {
 
     private func drawCorners(_ ctx: inout GraphicsContext, frame: CGRect,
                              color: Color, length: CGFloat, width: CGFloat) {
+        let radius: CGFloat = 28
+        let shading = GraphicsContext.Shading.color(color)
+
         // Top-left
         var p = Path()
         p.move(to: CGPoint(x: frame.minX, y: frame.minY + length))
-        p.addLine(to: CGPoint(x: frame.minX, y: frame.minY))
+        p.addLine(to: CGPoint(x: frame.minX, y: frame.minY + radius))
+        p.addQuadCurve(to: CGPoint(x: frame.minX + radius, y: frame.minY),
+                       control: CGPoint(x: frame.minX, y: frame.minY))
         p.addLine(to: CGPoint(x: frame.minX + length, y: frame.minY))
-        ctx.stroke(p, with: .color(color), lineWidth: width)
+        ctx.stroke(p, with: shading, style: StrokeStyle(lineWidth: width, lineCap: .round))
 
         // Top-right
         p = Path()
         p.move(to: CGPoint(x: frame.maxX - length, y: frame.minY))
-        p.addLine(to: CGPoint(x: frame.maxX, y: frame.minY))
+        p.addLine(to: CGPoint(x: frame.maxX - radius, y: frame.minY))
+        p.addQuadCurve(to: CGPoint(x: frame.maxX, y: frame.minY + radius),
+                       control: CGPoint(x: frame.maxX, y: frame.minY))
         p.addLine(to: CGPoint(x: frame.maxX, y: frame.minY + length))
-        ctx.stroke(p, with: .color(color), lineWidth: width)
+        ctx.stroke(p, with: shading, style: StrokeStyle(lineWidth: width, lineCap: .round))
 
         // Bottom-left
         p = Path()
         p.move(to: CGPoint(x: frame.minX, y: frame.maxY - length))
-        p.addLine(to: CGPoint(x: frame.minX, y: frame.maxY))
+        p.addLine(to: CGPoint(x: frame.minX, y: frame.maxY - radius))
+        p.addQuadCurve(to: CGPoint(x: frame.minX + radius, y: frame.maxY),
+                       control: CGPoint(x: frame.minX, y: frame.maxY))
         p.addLine(to: CGPoint(x: frame.minX + length, y: frame.maxY))
-        ctx.stroke(p, with: .color(color), lineWidth: width)
+        ctx.stroke(p, with: shading, style: StrokeStyle(lineWidth: width, lineCap: .round))
 
         // Bottom-right
         p = Path()
         p.move(to: CGPoint(x: frame.maxX - length, y: frame.maxY))
-        p.addLine(to: CGPoint(x: frame.maxX, y: frame.maxY))
+        p.addLine(to: CGPoint(x: frame.maxX - radius, y: frame.maxY))
+        p.addQuadCurve(to: CGPoint(x: frame.maxX, y: frame.maxY - radius),
+                       control: CGPoint(x: frame.maxX, y: frame.maxY))
         p.addLine(to: CGPoint(x: frame.maxX, y: frame.maxY - length))
-        ctx.stroke(p, with: .color(color), lineWidth: width)
+        ctx.stroke(p, with: shading, style: StrokeStyle(lineWidth: width, lineCap: .round))
     }
 }
