@@ -266,8 +266,8 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
     func toggleZoom() {
         guard let device = captureDevice else { return }
         let target: CGFloat = zoomFactor > 1.15 ? 1.0 : 2.0
-        device.setZoomImmediate(target)
-        zoomFactor = target
+        device.rampZoom(toFactor: target, rate: 8)
+        withAnimation(.easeOut(duration: 0.25)) { zoomFactor = target }
     }
 
     func resume() {
@@ -275,8 +275,8 @@ final class ScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutpu
         lastResult  = nil
         detectedURL = nil
         // Reset zoom when re-scanning
-        captureDevice?.setZoomImmediate(1.0)
-        zoomFactor = 1.0
+        captureDevice?.rampZoom(toFactor: 1.0, rate: 8)
+        withAnimation(.easeOut(duration: 0.25)) { zoomFactor = 1.0 }
     }
 
     private func setTorch(_ on: Bool) {
