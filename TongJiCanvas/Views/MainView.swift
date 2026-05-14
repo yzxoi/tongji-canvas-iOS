@@ -363,20 +363,20 @@ private struct CourseGroupHeader: View {
 
     var body: some View {
         HStack {
-            Image(systemName: "folder").foregroundStyle(Color(hex: 0x0EA5E9))
+            Image(systemName: "folder").foregroundStyle(Color(hex: 0xB8A2FF))
             Text(course.name)
-                .foregroundStyle(Color(hex: 0x0EA5E9))
+                .foregroundStyle(Color(hex: 0xB8A2FF))
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
             Spacer()
             Text("\(memberCount)").font(.caption.weight(.semibold))
                 .padding(.horizontal, 10).padding(.vertical, 2)
-                .background(Color(hex: 0x0EA5E9).opacity(0.15)).clipShape(Capsule())
-                .foregroundStyle(Color(hex: 0x0EA5E9))
+                .background(Color(hex: 0xB8A2FF).opacity(0.15)).clipShape(Capsule())
+                .foregroundStyle(Color(hex: 0xB8A2FF))
             if memberCount > 0 {
                 Button(action: onToggleAll) {
                     Image(systemName: allSelected ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(Color(hex: 0x0EA5E9))
+                        .foregroundStyle(Color(hex: 0xB8A2FF))
                 }
                 .buttonStyle(.plain)
             }

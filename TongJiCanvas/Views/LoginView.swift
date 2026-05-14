@@ -48,7 +48,7 @@ struct LoginView: View {
 
                 Text(vm.statusMessage)
                     .font(.caption)
-                    .foregroundStyle(vm.loginDetected ? .blue : Color(.secondaryLabel))
+                    .foregroundStyle(vm.loginDetected ? Color(hex: 0x7C3AED) : Color(.secondaryLabel))
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 16)

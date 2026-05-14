@@ -172,7 +172,7 @@ struct ScannerView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
-                .tint(vm.isZoomed ? .blue : nil)
+                .tint(vm.isZoomed ? Color(hex: 0x7C3AED) : nil)
             }
         }
         .padding(20)
