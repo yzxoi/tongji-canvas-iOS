@@ -72,25 +72,41 @@ struct LoginView: View {
     }
 
     private var tipCard: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Instructions").font(.subheadline.weight(.semibold))
-            Text("1. Sign in with your university IAM account. Cookies will be captured automatically.")
-                .font(.caption).foregroundStyle(.secondary)
-            Text("2. Switch between Mobile and Desktop mode if the page renders incorrectly.")
-                .font(.caption).foregroundStyle(.secondary)
+        HStack(alignment: .top, spacing: Spacing.md) {
+            ZStack {
+                Circle()
+                    .fill(Palette.accentSurface)
+                    .frame(width: 32, height: 32)
+                Image(systemName: "info.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Palette.accent)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Instructions")
+                    .font(.subheadline.weight(.semibold))
+                Text("Sign in with your university IAM account — cookies are captured automatically. Switch UA modes if the page renders incorrectly.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineSpacing(2)
+            }
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16).padding(.vertical, 12)
-        .background(.quaternary)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .padding(Spacing.md)
+        .background(Palette.accentSurface.opacity(0.5), in: RoundedRectangle(cornerRadius: Radius.inner))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.inner)
+                .strokeBorder(Palette.accent.opacity(0.15), lineWidth: 1)
+        )
     }
 
     private func statusChip(icon: String, label: String) -> some View {
         Label(label, systemImage: icon)
-            .font(.caption)
-            .padding(.horizontal, 12).padding(.vertical, 6)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(Capsule())
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 6)
+            .background(Color(.secondarySystemBackground), in: Capsule())
     }
 }
 
