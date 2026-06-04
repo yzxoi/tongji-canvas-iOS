@@ -26,6 +26,7 @@ struct MainView: View {
 
     @State private var selectedIds: Set<UUID> = []
     @State private var showAddSheet        = false
+    @State private var showEmptyAddSheet   = false
     @State private var showOAuthLogin      = false
     @State private var showManualAdd       = false
     @State private var showScanner         = false
@@ -339,7 +340,7 @@ struct MainView: View {
             }
 
             Button {
-                showAddSheet = true
+                showEmptyAddSheet = true
             } label: {
                 Label("Add First Identity", systemImage: "plus.circle.fill")
                     .font(.subheadline.weight(.semibold))
@@ -350,6 +351,9 @@ struct MainView: View {
                     .clipShape(Capsule())
             }
             .buttonStyle(.plain)
+            .confirmationDialog("Add Identity", isPresented: $showEmptyAddSheet) {
+                addIdentityDialogActions
+            }
 
             Spacer()
             Spacer()
@@ -386,11 +390,13 @@ struct MainView: View {
         )
         .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
         .animation(.spring(response: 0.42, dampingFraction: 0.86), value: hasSelection)
-        .confirmationDialog("Add Identity", isPresented: $showAddSheet) {
-            Button("Sign in via IAM (auto-capture)") { showOAuthLogin = true }
-            Button("Paste Credential") { showManualAdd = true }
-            Button("Cancel", role: .cancel) {}
-        }
+    }
+
+    @ViewBuilder
+    private var addIdentityDialogActions: some View {
+        Button("Sign in via IAM (auto-capture)") { showOAuthLogin = true }
+        Button("Paste Credential") { showManualAdd = true }
+        Button("Cancel", role: .cancel) {}
     }
 
     /// Top bar that surfaces "N selected · Clear" while the dock holds buttons below.
@@ -455,6 +461,9 @@ struct MainView: View {
                     )
             }
             .buttonStyle(PressableButtonStyle())
+            .confirmationDialog("Add Identity", isPresented: $showAddSheet) {
+                addIdentityDialogActions
+            }
 
             Button {
                 guard canFanOut else { return }
